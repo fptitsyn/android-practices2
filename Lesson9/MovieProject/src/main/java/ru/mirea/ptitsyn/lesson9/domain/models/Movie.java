@@ -1,10 +1,17 @@
+package ru.mirea.ptitsyn.lesson9.domain.models;
+
 public class Movie {
-    private int id;
-    private String name;
+
+    private final int id;
+    private final String name;
 
     public Movie(int id, String name) {
         this.id = id;
         this.name = name;
+    }
+
+    public int getId() {
+        return id;
     }
 
     public String getName() {
