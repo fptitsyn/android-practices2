@@ -7,9 +7,9 @@ import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.UserProfileChangeRequest;
 
-import ru.mirea.ptitsyn.englisharound.domain.models.User;
-import ru.mirea.ptitsyn.englisharound.domain.repository.AuthCallback;
-import ru.mirea.ptitsyn.englisharound.domain.repository.AuthRepository;
+import ru.mirea.ptitsyn.domain.models.User;
+import ru.mirea.ptitsyn.domain.repository.AuthCallback;
+import ru.mirea.ptitsyn.domain.repository.AuthRepository;
 
 public final class AuthRepositoryImpl implements AuthRepository {
     private final FirebaseAuth auth;

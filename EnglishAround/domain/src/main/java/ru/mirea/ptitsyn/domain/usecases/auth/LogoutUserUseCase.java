@@ -1,4 +1,4 @@
-package ru.mirea.ptitsyn.domain.usecases;
+package ru.mirea.ptitsyn.domain.usecases.auth;
 
 import ru.mirea.ptitsyn.domain.models.User;
 import ru.mirea.ptitsyn.domain.repository.AuthCallback;

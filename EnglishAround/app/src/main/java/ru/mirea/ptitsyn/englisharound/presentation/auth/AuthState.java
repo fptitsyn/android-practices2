@@ -1,6 +1,5 @@
 package ru.mirea.ptitsyn.englisharound.presentation.auth;
 
-import com.google.firebase.firestore.auth.User;
 import ru.mirea.ptitsyn.domain.models.User;
 
 public final class AuthState {

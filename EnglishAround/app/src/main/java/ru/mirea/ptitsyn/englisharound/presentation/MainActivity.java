@@ -5,14 +5,13 @@ import android.os.Bundle;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import ru.mirea.ptitsyn.englisharound.R;
-import ru.mirea.ptitsyn.englisharound.data.repository.AuthRepositoryImpl;
-import ru.mirea.ptitsyn.englisharound.domain.models.User;
-import ru.mirea.ptitsyn.englisharound.domain.repository.AuthRepository;
-import ru.mirea.ptitsyn.englisharound.domain.usecases.GetCurrentUserUseCase;
-import ru.mirea.ptitsyn.englisharound.domain.usecases.LogoutUserUseCase;
+import ru.mirea.ptitsyn.data.repository.AuthRepositoryImpl;
+import ru.mirea.ptitsyn.domain.models.User;
+import ru.mirea.ptitsyn.domain.repository.AuthRepository;
+import ru.mirea.ptitsyn.domain.usecases.auth.GetCurrentUserUseCase;
+import ru.mirea.ptitsyn.domain.usecases.auth.LogoutUserUseCase;
 import ru.mirea.ptitsyn.englisharound.presentation.auth.AuthUi;
 
-// Temporary landing screen. Add the application's fragments here later.
 public final class MainActivity extends AppCompatActivity {
     private AuthRepository repository;
 

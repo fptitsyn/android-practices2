@@ -5,41 +5,52 @@
     android:id="@+id/registerRoot" android:layout_width="match_parent"
     android:layout_height="match_parent" android:fillViewport="true"
     android:background="@color/ea_background" android:clipToPadding="false">
+
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="vertical" android:paddingStart="24dp" android:paddingEnd="24dp"
         android:paddingBottom="24dp">
+
         <LinearLayout android:layout_width="match_parent" android:layout_height="56dp"
             android:orientation="horizontal" android:gravity="center_vertical">
+
             <ImageButton android:id="@+id/backButton" android:layout_width="48dp"
                 android:layout_height="48dp" android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ea_ic_back" android:contentDescription="Назад"/>
+
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:layout_marginStart="8dp" android:text="Регистрация"
                 android:textSize="18sp" android:textColor="@color/ea_text"/>
+
         </LinearLayout>
+
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="20dp" android:text="Создание аккаунта"
             android:textSize="26sp" android:textStyle="bold" android:textColor="@color/ea_text"/>
+
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="8dp" android:layout_marginBottom="8dp"
             android:text="Заполните данные для регистрации"
             android:textSize="14sp" android:textColor="@color/ea_muted"/>
+
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/nameLayout" style="@style/EaField"
-            android:hint="Имя" app:startIconDrawable="@drawable/ea_ic_person"
-            >
+            android:hint="Имя" app:startIconDrawable="@drawable/ea_ic_person">
+
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/nameInput" style="@style/EaInput"
                 android:inputType="textPersonName" android:autofillHints="personName" android:imeOptions="actionNext"/>
+
         </com.google.android.material.textfield.TextInputLayout>
+
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/emailLayout" style="@style/EaField"
-            android:hint="Электронная почта" app:startIconDrawable="@drawable/ea_ic_email"
-            >
+            android:hint="Электронная почта" app:startIconDrawable="@drawable/ea_ic_email">
+
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/emailInput" style="@style/EaInput"
                 android:inputType="textEmailAddress" android:autofillHints="emailAddress" android:imeOptions="actionNext"/>
         </com.google.android.material.textfield.TextInputLayout>
+
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/passwordLayout" style="@style/EaField"
             android:hint="Пароль" app:startIconDrawable="@drawable/ea_ic_lock"
@@ -48,6 +59,7 @@
                 android:id="@+id/passwordInput" style="@style/EaInput"
                 android:inputType="textPassword" android:autofillHints="newPassword" android:saveEnabled="false" android:imeOptions="actionNext"/>
         </com.google.android.material.textfield.TextInputLayout>
+
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/confirmLayout" style="@style/EaField"
             android:hint="Повторите пароль" app:startIconDrawable="@drawable/ea_ic_lock"
@@ -56,30 +68,36 @@
                 android:id="@+id/confirmInput" style="@style/EaInput"
                 android:inputType="textPassword" android:autofillHints="newPassword" android:saveEnabled="false" android:imeOptions="actionDone"/>
         </com.google.android.material.textfield.TextInputLayout>
+
         <TextView android:id="@+id/errorText"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="12dp" android:textColor="@color/ea_error"
             android:textSize="12sp" android:accessibilityLiveRegion="polite"
             android:visibility="gone" tools:visibility="visible"
             tools:text="Пароли не совпадают"/>
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/registerButton" style="@style/EaButton"
             android:layout_marginTop="16dp" android:text="Зарегистрироваться"/>
+
         <ProgressBar android:id="@+id/progress"
             android:layout_width="28dp" android:layout_height="28dp"
             android:layout_gravity="center_horizontal" android:layout_marginTop="12dp"
             android:indeterminateTint="@color/ea_primary" android:visibility="gone"
             android:contentDescription="Выполняется запрос"/>
+
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="16dp" android:gravity="center"
             android:text="Создайте аккаунт, чтобы сохранять слова и отслеживать прогресс."
             android:textSize="12sp" android:textColor="@color/ea_muted"/>
+
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="horizontal" android:gravity="center" android:layout_marginTop="32dp">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:text="Уже есть аккаунт?" android:textSize="13sp" android:textColor="@color/ea_muted"/>
             <TextView android:id="@+id/loginLink" style="@style/EaLink" android:text="Войти"/>
         </LinearLayout>
+
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="horizontal" android:gravity="center_vertical"
             android:layout_marginTop="20dp">
@@ -91,23 +109,6 @@
             <View android:layout_width="0dp" android:layout_height="1dp"
                 android:layout_weight="1" android:background="#E5E5E5"/>
         </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="horizontal" android:gravity="center" android:layout_marginTop="12dp">
-            <com.google.android.material.button.MaterialButton
-                android:layout_width="56dp" android:layout_height="56dp" android:text="G"
-                android:enabled="false" android:contentDescription="Вход Google пока не подключён"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                app:cornerRadius="28dp"/>
-            <com.google.android.material.button.MaterialButton
-                android:layout_width="56dp" android:layout_height="56dp" android:text="VK"
-                android:layout_marginStart="12dp" android:enabled="false"
-                android:contentDescription="Вход VK пока не подключён"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                app:cornerRadius="28dp"/>
-        </LinearLayout>
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="Google и VK пока не подключены" android:gravity="center"
-            android:textSize="11sp" android:textColor="@color/ea_muted"/>
 
     </LinearLayout>
 </ScrollView>

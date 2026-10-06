@@ -1,4 +1,4 @@
-package ru.mirea.ptitsyn.englisharound.domain.usecases.dict;
+package ru.mirea.ptitsyn.domain.usecases.dict;
 
 public class RemoveWordFromDictionaryUseCase {
 }

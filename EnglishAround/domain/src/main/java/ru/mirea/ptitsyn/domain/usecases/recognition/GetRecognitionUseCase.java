@@ -1,4 +1,4 @@
-package ru.mirea.ptitsyn.englisharound.domain.usecases.recognition;
+package ru.mirea.ptitsyn.domain.usecases.recognition;
 
 public class GetRecognitionUseCase {
 }

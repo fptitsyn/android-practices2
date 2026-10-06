@@ -1,4 +1,4 @@
-package ru.mirea.ptitsyn.englisharound.domain.usecases.studysession;
+package ru.mirea.ptitsyn.domain.usecases.studysession;
 
 public class SaveStudySessionResultUseCase {
 }

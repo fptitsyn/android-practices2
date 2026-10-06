@@ -1,4 +1,4 @@
-package ru.mirea.ptitsyn.englisharound.domain.usecases.catalog;
+package ru.mirea.ptitsyn.domain.usecases.catalog;
 
 public class GetWordDetailsUseCase {
 }

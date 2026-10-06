@@ -4,11 +4,11 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
-import ru.mirea.ptitsyn.englisharound.data.repository.AuthRepositoryImpl;
-import ru.mirea.ptitsyn.englisharound.domain.models.User;
-import ru.mirea.ptitsyn.englisharound.domain.repository.AuthCallback;
-import ru.mirea.ptitsyn.englisharound.domain.repository.AuthRepository;
-import ru.mirea.ptitsyn.englisharound.domain.usecases.*;
+import ru.mirea.ptitsyn.data.repository.AuthRepositoryImpl;
+import ru.mirea.ptitsyn.domain.models.User;
+import ru.mirea.ptitsyn.domain.repository.AuthCallback;
+import ru.mirea.ptitsyn.domain.repository.AuthRepository;
+import ru.mirea.ptitsyn.domain.usecases.auth.*;
 
 public final class AuthViewModel extends ViewModel {
     // Dependency assembly. Firebase types are confined to data.
