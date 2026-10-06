@@ -1,10 +1,9 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.google.gms.google.services)
 }
 
 android {
-    namespace = "ru.mirea.ptitsyn.englisharound"
+    namespace = "ru.mirea.ptitsyn.data"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -12,7 +11,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "ru.mirea.ptitsyn.englisharound"
+        applicationId = "ru.mirea.ptitsyn.data"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
@@ -34,19 +33,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-
-    buildFeatures {
-        viewBinding = true;
-    }
 }
 
 dependencies {
     implementation(libs.appcompat)
-    implementation(libs.material)
-    implementation(libs.activity)
-    implementation(libs.constraintlayout)
-    implementation(libs.firebase.auth)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
-    androidTestImplementation(libs.espresso.core)
 }
