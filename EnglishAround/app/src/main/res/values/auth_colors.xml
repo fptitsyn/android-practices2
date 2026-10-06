@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ea_primary">#2196F3</color>
+    <color name="ea_primary_dark">#167BC4</color>
+    <color name="ea_background">#FAFAFA</color>
+    <color name="ea_surface">#F3F3F3</color>
+    <color name="ea_text">#262626</color>
+    <color name="ea_muted">#808080</color>
+    <color name="ea_error">#D93B42</color>
+    <color name="ea_outline">#BDBDBD</color>
+</resources>

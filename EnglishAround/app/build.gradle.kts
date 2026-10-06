@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "ru.mirea.ptitsyn.englisharound"
-        minSdk = 26
+        minSdk = 27
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -46,6 +46,7 @@ dependencies {
     implementation(libs.activity)
     implementation(libs.constraintlayout)
     implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

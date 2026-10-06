@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.android.library)
 }
 
 android {
@@ -11,13 +11,10 @@ android {
     }
 
     defaultConfig {
-        applicationId = "ru.mirea.ptitsyn.data"
-        minSdk = 26
-        targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        minSdk = 27
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
@@ -37,6 +34,8 @@ android {
 
 dependencies {
     implementation(libs.appcompat)
+    implementation(libs.material)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
+    androidTestImplementation(libs.espresso.core)
 }

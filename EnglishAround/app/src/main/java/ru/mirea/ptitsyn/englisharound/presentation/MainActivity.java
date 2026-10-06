@@ -1,26 +1,48 @@
 package ru.mirea.ptitsyn.englisharound.presentation;
 
+import android.content.Intent;
 import android.os.Bundle;
-
-import androidx.activity.EdgeToEdge;
+import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
-
 import ru.mirea.ptitsyn.englisharound.R;
+import ru.mirea.ptitsyn.englisharound.data.repository.AuthRepositoryImpl;
+import ru.mirea.ptitsyn.englisharound.domain.models.User;
+import ru.mirea.ptitsyn.englisharound.domain.repository.AuthRepository;
+import ru.mirea.ptitsyn.englisharound.domain.usecases.GetCurrentUserUseCase;
+import ru.mirea.ptitsyn.englisharound.domain.usecases.LogoutUserUseCase;
+import ru.mirea.ptitsyn.englisharound.presentation.auth.AuthUi;
 
-public class MainActivity extends AppCompatActivity {
+// Temporary landing screen. Add the application's fragments here later.
+public final class MainActivity extends AppCompatActivity {
+    private AuthRepository repository;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
+        AuthUi.applyInsets(this, findViewById(R.id.mainRoot));
+        repository = new AuthRepositoryImpl();
+        findViewById(R.id.logoutButton).setOnClickListener(v -> {
+            new LogoutUserUseCase(repository).execute();
+            openLogin();
         });
+    }
+
+    @Override protected void onStart() {
+        super.onStart();
+        User user = new GetCurrentUserUseCase(repository).execute();
+        if (user == null) {
+            openLogin();
+            return;
+        }
+        String name = user.getName().isEmpty() ? user.getEmail() : user.getName();
+        ((TextView) findViewById(R.id.welcomeText)).setText("Здравствуйте, " + name + "!");
+        ((TextView) findViewById(R.id.emailText)).setText(user.getEmail());
+    }
+
+    private void openLogin() {
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 }

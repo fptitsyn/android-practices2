@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.EnglishAround" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">@color/ea_primary</item>
+        <item name="colorPrimaryVariant">@color/ea_primary_dark</item>
+        <item name="colorSecondary">@color/ea_primary</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorError">@color/ea_error</item>
+        <item name="android:windowBackground">@color/ea_background</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:statusBarColor">@color/ea_background</item>
+        <item name="android:navigationBarColor">@color/ea_background</item>
+    </style>
+    <style name="EaField" parent="Widget.MaterialComponents.TextInputLayout.FilledBox">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">12dp</item>
+        <item name="boxBackgroundColor">@color/ea_surface</item>
+        <item name="boxStrokeColor">@color/ea_outline</item>
+        <item name="boxCornerRadiusTopStart">6dp</item>
+        <item name="boxCornerRadiusTopEnd">6dp</item>
+        <item name="boxCornerRadiusBottomStart">0dp</item>
+        <item name="boxCornerRadiusBottomEnd">0dp</item>
+        <item name="startIconTint">@color/ea_muted</item>
+        <item name="endIconTint">@color/ea_muted</item>
+        <item name="hintTextColor">@color/ea_muted</item>
+    </style>
+    <style name="EaInput">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/ea_text</item>
+    </style>
+    <style name="EaButton" parent="Widget.MaterialComponents.Button">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">56dp</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="cornerRadius">28dp</item>
+        <item name="backgroundTint">@color/ea_primary</item>
+    </style>
+    <style name="EaLink">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/ea_primary</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+        <item name="android:paddingStart">4dp</item>
+        <item name="android:paddingEnd">4dp</item>
+    </style>
+</resources>

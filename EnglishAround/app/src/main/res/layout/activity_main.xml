@@ -1,19 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".presentation.MainActivity">
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Hello World!"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/mainRoot" android:layout_width="match_parent"
+    android:layout_height="match_parent" android:orientation="vertical"
+    android:padding="24dp" android:background="@color/ea_background">
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="English Around" android:textSize="26sp" android:textStyle="bold"
+        android:textColor="@color/ea_text"/>
+    <TextView android:id="@+id/welcomeText" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:layout_marginTop="24dp"
+        android:textSize="20sp" android:textColor="@color/ea_text"/>
+    <TextView android:id="@+id/emailText" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:layout_marginTop="8dp"
+        android:textColor="@color/ea_muted"/>
+    <FrameLayout android:id="@+id/fragmentContainer"
+        android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="32dp" android:text="Вход выполнен. Здесь позже появятся фрагменты приложения."
+            android:textColor="@color/ea_muted" android:textSize="16sp"/>
+    </FrameLayout>
+    <com.google.android.material.button.MaterialButton android:id="@+id/logoutButton"
+        style="@style/EaButton" android:text="Выйти"/>
+</LinearLayout>
