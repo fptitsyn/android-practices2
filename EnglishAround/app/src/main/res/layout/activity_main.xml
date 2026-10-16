@@ -1,24 +1,123 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/mainRoot" android:layout_width="match_parent"
-    android:layout_height="match_parent" android:orientation="vertical"
-    android:padding="24dp" android:background="@color/ea_background">
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="English Around" android:textSize="26sp" android:textStyle="bold"
-        android:textColor="@color/ea_text"/>
-    <TextView android:id="@+id/welcomeText" android:layout_width="match_parent"
-        android:layout_height="wrap_content" android:layout_marginTop="24dp"
-        android:textSize="20sp" android:textColor="@color/ea_text"/>
-    <TextView android:id="@+id/emailText" android:layout_width="match_parent"
-        android:layout_height="wrap_content" android:layout_marginTop="8dp"
-        android:textColor="@color/ea_muted"/>
-    <FrameLayout android:id="@+id/fragmentContainer"
-        android:layout_width="match_parent" android:layout_height="0dp"
-        android:layout_weight="1">
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="32dp" android:text="Вход выполнен. Здесь позже появятся фрагменты приложения."
-            android:textColor="@color/ea_muted" android:textSize="16sp"/>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/mainRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="?android:attr/colorBackground">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="English Around"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/welcomeText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Загрузка профиля…"
+        android:textSize="18sp" />
+
+    <TextView
+        android:id="@+id/emailText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textSize="14sp" />
+
+    <ProgressBar
+        android:id="@+id/progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:layout_marginTop="8dp"
+        android:indeterminate="true"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/errorText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="#B3261E"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+    <Button
+        android:id="@+id/refreshButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Обновить данные" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Каталог слов"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Нажмите на слово, чтобы добавить его в словарь"
+        android:textSize="13sp" />
+
+    <ListView
+        android:id="@+id/catalogList"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="4dp" />
+
+    <TextView
+        android:id="@+id/dictionaryTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Мой словарь: 0"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Удерживайте слово, чтобы удалить его"
+        android:textSize="13sp" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="4dp">
+
+        <ListView
+            android:id="@+id/dictionaryList"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <TextView
+            android:id="@+id/dictionaryEmptyText"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="В словаре пока нет слов"
+            android:textSize="15sp"
+            android:visibility="gone" />
+
     </FrameLayout>
-    <com.google.android.material.button.MaterialButton android:id="@+id/logoutButton"
-        style="@style/EaButton" android:text="Выйти"/>
+
+    <Button
+        android:id="@+id/logoutButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Выйти" />
+
 </LinearLayout>
