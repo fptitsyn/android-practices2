@@ -7,8 +7,11 @@ appcompat = "1.8.0"
 material = "1.14.0"
 activity = "1.13.0"
 constraintlayout = "2.2.2"
+lifecycle = "2.9.4"
 
 [libraries]
+lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle" }
+lifecycle-livedata = { module = "androidx.lifecycle:lifecycle-livedata", version.ref = "lifecycle" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -20,3 +23,5 @@ constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayo
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 
+
+android-library = { id = "com.android.library", version.ref = "agp" }

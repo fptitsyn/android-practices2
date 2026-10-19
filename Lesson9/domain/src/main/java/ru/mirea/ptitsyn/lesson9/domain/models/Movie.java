@@ -1,7 +1,6 @@
 package ru.mirea.ptitsyn.lesson9.domain.models;
 
-public class Movie {
-
+public final class Movie {
     private final int id;
     private final String name;
 
@@ -10,11 +9,6 @@ public class Movie {
         this.name = name;
     }
 
-    public int getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
+    public int getId() { return id; }
+    public String getName() { return name; }
 }

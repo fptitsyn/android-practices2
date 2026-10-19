@@ -1,72 +1,37 @@
 package ru.mirea.ptitsyn.lesson9;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
 
-import ru.mirea.ptitsyn.lesson9.data.repository.MovieRepositoryImpl;
-import ru.mirea.ptitsyn.lesson9.domain.GetFavoriteFilmUseCase;
-import ru.mirea.ptitsyn.lesson9.domain.SaveMovieToFavoriteUseCase;
 import ru.mirea.ptitsyn.lesson9.domain.models.Movie;
-import ru.mirea.ptitsyn.lesson9.domain.repository.MovieRepository;
+import ru.mirea.ptitsyn.lesson9.presentation.MainViewModel;
+import ru.mirea.ptitsyn.lesson9.presentation.ViewModelFactory;
 
-public class MainActivity extends AppCompatActivity {
-    private EditText editTextMovie;
-    private TextView textViewMovie;
-    private SaveMovieToFavoriteUseCase saveMovieUseCase;
-    private GetFavoriteFilmUseCase getFavoriteFilmUseCase;
+public final class MainActivity extends AppCompatActivity {
+    private MainViewModel vm;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Log.d("MainActivity", "MainActivity created");
 
-        editTextMovie = findViewById(R.id.editTextMovie);
-        textViewMovie = findViewById(R.id.textViewMovie);
+        EditText editTextMovie = findViewById(R.id.editTextMovie);
+        TextView textViewMovie = findViewById(R.id.textViewMovie);
 
-        MovieRepository movieRepository = new MovieRepositoryImpl(getApplicationContext());
-        saveMovieUseCase = new SaveMovieToFavoriteUseCase(movieRepository);
-        getFavoriteFilmUseCase = new GetFavoriteFilmUseCase(movieRepository);
+        vm = new ViewModelProvider(this, new ViewModelFactory(this))
+                .get(MainViewModel.class);
 
-        findViewById(R.id.buttonSaveMovie).setOnClickListener(view -> {
-            saveFavoriteMovie();
-        });
+        vm.getFavoriteMovie().observe(this, textViewMovie::setText);
 
-        findViewById(R.id.buttonGetMovie).setOnClickListener(view -> {
-            showFavoriteMovie();
-        });
-    }
+        findViewById(R.id.buttonSaveMovie).setOnClickListener(view ->
+                vm.setText(new Movie(1, editTextMovie.getText().toString())));
 
-    private void saveFavoriteMovie() {
-        String movieName = editTextMovie.getText().toString().trim();
-
-        if (movieName.isEmpty()) {
-            editTextMovie.setError("Введите название фильма");
-            return;
-        }
-
-        Movie movie = new Movie(1, movieName);
-        boolean result = saveMovieUseCase.execute(movie);
-
-        if (result) {
-            textViewMovie.setText("Фильм сохранён: " + movieName);
-            editTextMovie.setText("");
-        } else {
-            textViewMovie.setText("Не удалось сохранить фильм");
-        }
-    }
-
-    private void showFavoriteMovie() {
-        Movie movie = getFavoriteFilmUseCase.execute();
-
-        if (movie == null) {
-            textViewMovie.setText("Любимый фильм ещё не сохранён");
-            return;
-        }
-
-        textViewMovie.setText("Любимый фильм: " + movie.getName());
+        findViewById(R.id.buttonGetMovie).setOnClickListener(view -> vm.getText());
     }
 }
