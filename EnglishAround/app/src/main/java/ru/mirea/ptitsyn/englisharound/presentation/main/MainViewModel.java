@@ -1,28 +1,23 @@
 package ru.mirea.ptitsyn.englisharound.presentation.main;
 
-import android.app.Application;
+import android.util.Log;
 
-import androidx.annotation.NonNull;
-import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.ViewModel;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import ru.mirea.ptitsyn.data.database.AppDatabase;
-import ru.mirea.ptitsyn.data.network.NetworkApi;
-import ru.mirea.ptitsyn.data.repository.AuthRepositoryImpl;
-import ru.mirea.ptitsyn.data.repository.UserDictionaryRepositoryImpl;
-import ru.mirea.ptitsyn.data.repository.UserRepositoryImpl;
-import ru.mirea.ptitsyn.data.repository.WordRepositoryImpl;
-import ru.mirea.ptitsyn.data.storage.UserPreferences;
+import java.util.function.Consumer;
 
 import ru.mirea.ptitsyn.domain.models.User;
 import ru.mirea.ptitsyn.domain.models.Word;
+
 import ru.mirea.ptitsyn.domain.repository.AuthRepository;
 import ru.mirea.ptitsyn.domain.repository.UserDictionaryRepository;
 import ru.mirea.ptitsyn.domain.repository.UserRepository;
@@ -35,72 +30,66 @@ import ru.mirea.ptitsyn.domain.usecases.dict.AddWordToDictionaryUseCase;
 import ru.mirea.ptitsyn.domain.usecases.dict.GetPersonalDictionaryUseCase;
 import ru.mirea.ptitsyn.domain.usecases.dict.RemoveWordFromDictionaryUseCase;
 
-public final class MainViewModel extends AndroidViewModel {
+public final class MainViewModel extends ViewModel {
 
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private static final String TAG = "MainViewModel";
 
-    private final MutableLiveData<MainUiState> state =
-            new MutableLiveData<>(
-                    new MainUiState(
-                            null,
-                            Collections.emptyList(),
-                            Collections.emptyList(),
-                            true,
-                            false,
-                            ""
-                    )
-            );
+    private final ExecutorService worker = Executors.newSingleThreadExecutor();
+
+    private final Executor mainExecutor;
 
     private final UserRepository userRepository;
 
     private final GetCurrentUserUseCase getCurrentUser;
     private final LogoutUserUseCase logoutUser;
-
     private final GetWordCatalogUseCase getCatalog;
     private final GetPersonalDictionaryUseCase getDictionary;
     private final AddWordToDictionaryUseCase addWord;
     private final RemoveWordFromDictionaryUseCase removeWord;
 
+    // Источник № 1: результат получения каталога из NetworkApi.
+    private final MutableLiveData<List<Word>> catalogSource =
+            new MutableLiveData<>(Collections.emptyList());
+
+    // Источник № 2: результат чтения личного словаря из Room.
+    private final MutableLiveData<List<Word>> dictionarySource =
+            new MutableLiveData<>(Collections.emptyList());
+
+    // Общее состояние экрана, зависящее от обоих источников.
+    private final MediatorLiveData<MainUiState> state = new MediatorLiveData<>();
+
     private User currentUser;
-    private List<Word> catalog = new ArrayList<>();
-    private List<Word> dictionary = new ArrayList<>();
+    private boolean loading;
     private boolean signedOut;
+    private String error = "";
 
-    public MainViewModel(@NonNull Application application) {
-        super(application);
+    private volatile boolean cleared;
 
-        AuthRepository authRepository = new AuthRepositoryImpl();
-
-        userRepository = new UserRepositoryImpl(
-                new UserPreferences(application)
-        );
-
-        WordRepository wordRepository = new WordRepositoryImpl(
-                new NetworkApi()
-        );
-
-        UserDictionaryRepository dictionaryRepository =
-                new UserDictionaryRepositoryImpl(
-                        AppDatabase.getInstance(application)
-                                .dictionaryWordDao()
-                );
+    public MainViewModel(
+            AuthRepository authRepository,
+            UserRepository userRepository,
+            WordRepository wordRepository,
+            UserDictionaryRepository dictionaryRepository,
+            Executor mainExecutor
+    ) {
+        this.mainExecutor = mainExecutor;
+        this.userRepository = userRepository;
 
         getCurrentUser = new GetCurrentUserUseCase(authRepository);
         logoutUser = new LogoutUserUseCase(authRepository);
 
         getCatalog = new GetWordCatalogUseCase(wordRepository);
 
-        getDictionary = new GetPersonalDictionaryUseCase(
-                dictionaryRepository
-        );
+        getDictionary = new GetPersonalDictionaryUseCase(dictionaryRepository);
 
-        addWord = new AddWordToDictionaryUseCase(
-                dictionaryRepository
-        );
+        addWord = new AddWordToDictionaryUseCase(dictionaryRepository);
 
-        removeWord = new RemoveWordFromDictionaryUseCase(
-                dictionaryRepository
-        );
+        removeWord = new RemoveWordFromDictionaryUseCase(dictionaryRepository);
+
+        state.addSource(catalogSource, words -> publishState());
+        state.addSource(dictionarySource, words -> publishState());
+
+        Log.d(TAG, "MainViewModel created");
 
         refresh();
     }
@@ -110,145 +99,179 @@ public final class MainViewModel extends AndroidViewModel {
     }
 
     public void refresh() {
-        executor.execute(() -> {
-            if (signedOut) {
-                return;
-            }
+        if (loading || signedOut || cleared) {
+            return;
+        }
 
-            publish(true, "");
+        submit(() -> {
+                    User authenticatedUser = getCurrentUser.execute();
 
-            try {
-                // Проверяем настоящую сессию Firebase.
-                User authenticatedUser = getCurrentUser.execute();
+                    if (authenticatedUser == null) {
+                        userRepository.clearUser();
 
-                if (authenticatedUser == null) {
-                    userRepository.clearUser();
+                        return new LoadedData(
+                                null,
+                                Collections.emptyList(),
+                                Collections.emptyList()
+                        );
+                    }
 
-                    currentUser = null;
-                    catalog = new ArrayList<>();
-                    dictionary = new ArrayList<>();
-                    signedOut = true;
+                    // SharedPreferences: сохраняем и читаем профиль.
+                    userRepository.saveUser(authenticatedUser);
+                    User localUser = userRepository.getUser();
 
-                    publish(false, "");
-                    return;
-                }
+                    if (localUser == null) {
+                        throw new IllegalStateException(
+                                "Локальный профиль отсутствует"
+                        );
+                    }
 
-                // Записываем профиль в SharedPreferences.
-                userRepository.saveUser(authenticatedUser);
+                    // Сетевая заглушка.
+                    List<Word> catalog = getCatalog.execute();
 
-                // Читаем профиль из SharedPreferences.
-                currentUser = userRepository.getUser();
-
-                if (currentUser == null) {
-                    throw new IllegalStateException(
-                            "Не удалось получить локальный профиль"
+                    // Room.
+                    List<Word> dictionary = getDictionary.execute(
+                            localUser.getId()
                     );
-                }
 
-                // Каталог приходит из NetworkApi.
-                catalog = getCatalog.execute();
+                    return new LoadedData(
+                            localUser,
+                            catalog,
+                            dictionary
+                    );
+                },
+                result -> {
+                    currentUser = result.user;
+                    signedOut = result.user == null;
 
-                // Личный словарь читается из Room.
-                dictionary = getDictionary.execute(
-                        currentUser.getId()
-                );
-
-                publish(false, "");
-
-            } catch (Exception exception) {
-                publish(false, "Не удалось загрузить данные");
-            }
-        });
+                    catalogSource.setValue(result.catalog);
+                    dictionarySource.setValue(result.dictionary);
+                },
+                "Не удалось загрузить данные"
+        );
     }
 
     public void addToDictionary(Word word) {
-        if (word == null) {
+        if (word == null || !canChangeDictionary()) {
             return;
         }
 
-        executor.execute(() -> {
-            if (signedOut || currentUser == null) {
-                return;
-            }
+        String userId = currentUser.getId();
 
-            publish(true, "");
-
-            try {
-                addWord.execute(currentUser.getId(), word);
-
-                dictionary = getDictionary.execute(
-                        currentUser.getId()
-                );
-
-                publish(false, "");
-
-            } catch (Exception exception) {
-                publish(false, "Не удалось добавить слово");
-            }
-        });
+        submit(
+                () -> {
+                    addWord.execute(userId, word);
+                    return getDictionary.execute(userId);
+                },
+                words -> dictionarySource.setValue(words),
+                "Не удалось добавить слово"
+        );
     }
 
     public void removeFromDictionary(Word word) {
-        if (word == null) {
+        if (word == null || !canChangeDictionary()) {
             return;
         }
 
-        executor.execute(() -> {
-            if (signedOut || currentUser == null) {
-                return;
-            }
+        String userId = currentUser.getId();
 
-            publish(true, "");
-
-            try {
-                removeWord.execute(
-                        currentUser.getId(),
-                        word.getId()
-                );
-
-                dictionary = getDictionary.execute(
-                        currentUser.getId()
-                );
-
-                publish(false, "");
-
-            } catch (Exception exception) {
-                publish(false, "Не удалось удалить слово");
-            }
-        });
+        submit(
+                () -> {
+                    removeWord.execute(userId, word.getId());
+                    return getDictionary.execute(userId);
+                },
+                words -> dictionarySource.setValue(words),
+                "Не удалось удалить слово"
+        );
     }
 
     public void logout() {
-        executor.execute(() -> {
-            if (signedOut) {
-                return;
-            }
+        if (loading || signedOut || cleared) {
+            return;
+        }
 
-            publish(true, "");
+        submit(
+                () -> {
+                    logoutUser.execute();
+                    userRepository.clearUser();
+                    return Boolean.TRUE;
+                },
+                result -> {
+                    currentUser = null;
+                    signedOut = true;
 
+                    catalogSource.setValue(Collections.emptyList());
+                    dictionarySource.setValue(Collections.emptyList());
+                },
+                "Не удалось выйти из аккаунта"
+        );
+    }
+
+    private boolean canChangeDictionary() {
+        return !loading
+                && !signedOut
+                && !cleared
+                && currentUser != null;
+    }
+
+    private <T> void submit(
+            Callable<T> task,
+            Consumer<T> onSuccess,
+            String errorMessage
+    ) {
+        loading = true;
+        error = "";
+        publishState();
+
+        worker.execute(() -> {
             try {
-                logoutUser.execute();
-                userRepository.clearUser();
+                T result = task.call();
 
-                currentUser = null;
-                catalog = new ArrayList<>();
-                dictionary = new ArrayList<>();
-                signedOut = true;
+                mainExecutor.execute(() -> {
+                    if (cleared) {
+                        return;
+                    }
 
-                publish(false, "");
+                    onSuccess.accept(result);
+
+                    loading = false;
+                    error = "";
+                    publishState();
+                });
 
             } catch (Exception exception) {
-                publish(false, "Не удалось выйти из аккаунта");
+                Log.e(TAG, errorMessage, exception);
+
+                mainExecutor.execute(() -> {
+                    if (cleared) {
+                        return;
+                    }
+
+                    loading = false;
+                    error = errorMessage;
+                    publishState();
+                });
             }
         });
     }
 
-    private void publish(boolean loading, String error) {
-        state.postValue(
+    private void publishState() {
+        if (cleared) {
+            return;
+        }
+
+        List<Word> catalog = catalogSource.getValue();
+        List<Word> dictionary = dictionarySource.getValue();
+
+        state.setValue(
                 new MainUiState(
                         currentUser,
-                        catalog,
-                        dictionary,
+                        catalog == null
+                                ? Collections.emptyList()
+                                : catalog,
+                        dictionary == null
+                                ? Collections.emptyList()
+                                : dictionary,
                         loading,
                         signedOut,
                         error
@@ -258,7 +281,27 @@ public final class MainViewModel extends AndroidViewModel {
 
     @Override
     protected void onCleared() {
-        executor.shutdown();
+        cleared = true;
+        worker.shutdown();
+
+        Log.d(TAG, "MainViewModel cleared");
+
         super.onCleared();
+    }
+
+    private static final class LoadedData {
+        final User user;
+        final List<Word> catalog;
+        final List<Word> dictionary;
+
+        LoadedData(
+                User user,
+                List<Word> catalog,
+                List<Word> dictionary
+        ) {
+            this.user = user;
+            this.catalog = catalog;
+            this.dictionary = dictionary;
+        }
     }
 }
