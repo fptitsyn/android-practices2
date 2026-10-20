@@ -158,8 +158,7 @@ public final class MainViewModel extends ViewModel {
 
         String userId = currentUser.getId();
 
-        submit(
-                () -> {
+        submit(() -> {
                     addWord.execute(userId, word);
                     return getDictionary.execute(userId);
                 },
@@ -175,8 +174,7 @@ public final class MainViewModel extends ViewModel {
 
         String userId = currentUser.getId();
 
-        submit(
-                () -> {
+        submit(() -> {
                     removeWord.execute(userId, word.getId());
                     return getDictionary.execute(userId);
                 },
@@ -263,8 +261,7 @@ public final class MainViewModel extends ViewModel {
         List<Word> catalog = catalogSource.getValue();
         List<Word> dictionary = dictionarySource.getValue();
 
-        state.setValue(
-                new MainUiState(
+        state.setValue(new MainUiState(
                         currentUser,
                         catalog == null
                                 ? Collections.emptyList()

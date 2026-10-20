@@ -3,10 +3,7 @@ package ru.mirea.ptitsyn.data.database;
 import androidx.annotation.NonNull;
 import androidx.room.Entity;
 
-@Entity(
-        tableName = "dictionary_words",
-        primaryKeys = {"userId", "wordId"}
-)
+@Entity(tableName = "dictionary_words", primaryKeys = {"userId", "wordId"})
 public class DictionaryWordEntity {
     @NonNull
     public String userId;

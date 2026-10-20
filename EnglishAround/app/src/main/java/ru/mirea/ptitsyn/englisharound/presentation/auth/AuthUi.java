@@ -11,6 +11,7 @@ public final class AuthUi {
     public static void applyInsets(AppCompatActivity activity, View root) {
         int left = root.getPaddingLeft(), top = root.getPaddingTop();
         int right = root.getPaddingRight(), bottom = root.getPaddingBottom();
+
         ViewCompat.setOnApplyWindowInsetsListener(root, (view, windowInsets) -> {
             Insets system = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
             Insets keyboard = windowInsets.getInsets(WindowInsetsCompat.Type.ime());
@@ -18,6 +19,7 @@ public final class AuthUi {
                     right + system.right, bottom + Math.max(system.bottom, keyboard.bottom));
             return windowInsets;
         });
+
         ViewCompat.requestApplyInsets(root);
     }
 }

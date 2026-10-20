@@ -3,7 +3,6 @@ package ru.mirea.ptitsyn.data.network;
 public final class NetworkApi {
 
     public String getWordsJson() {
-        // Имитация JSON-ответа внешнего сервиса.
         return "["
                 + "{\"id\":1,\"english\":\"apple\",\"translation\":\"яблоко\"},"
                 + "{\"id\":2,\"english\":\"book\",\"translation\":\"книга\"},"
