@@ -8,7 +8,6 @@ import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProvider;
 
 import ru.mirea.ptitsyn.data.database.AppDatabase;
-import ru.mirea.ptitsyn.data.network.NetworkApi;
 import ru.mirea.ptitsyn.data.repository.AuthRepositoryImpl;
 import ru.mirea.ptitsyn.data.repository.UserDictionaryRepositoryImpl;
 import ru.mirea.ptitsyn.data.repository.UserRepositoryImpl;
@@ -37,7 +36,7 @@ public final class MainViewModelFactory implements ViewModelProvider.Factory {
 
         AuthRepository authRepository = new AuthRepositoryImpl();
         UserRepository userRepository = new UserRepositoryImpl(new UserPreferences(applicationContext));
-        WordRepository wordRepository = new WordRepositoryImpl(new NetworkApi());
+        WordRepository wordRepository = new WordRepositoryImpl();
 
         UserDictionaryRepository dictionaryRepository =
                 new UserDictionaryRepositoryImpl(AppDatabase.getInstance(applicationContext).dictionaryWordDao());

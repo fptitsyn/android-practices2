@@ -6,6 +6,7 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
+import androidx.lifecycle.Transformations;
 
 import java.util.Collections;
 import java.util.List;
@@ -300,5 +301,9 @@ public final class MainViewModel extends ViewModel {
             this.catalog = catalog;
             this.dictionary = dictionary;
         }
+    }
+
+    public LiveData<List<Word>> getCatalog() {
+        return Transformations.map(state, MainUiState::getCatalog);
     }
 }

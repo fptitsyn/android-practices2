@@ -2,7 +2,6 @@ package ru.mirea.ptitsyn.englisharound.presentation;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -12,6 +11,8 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 
@@ -20,10 +21,9 @@ import ru.mirea.ptitsyn.englisharound.presentation.auth.AuthUi;
 import ru.mirea.ptitsyn.englisharound.presentation.main.MainUiState;
 import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModel;
 import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModelFactory;
+import ru.mirea.ptitsyn.englisharound.presentation.main.WordAdapter;
 
 public final class MainActivity extends AppCompatActivity {
-
-    private static final String TAG = "MainActivity";
 
     private MainViewModel model;
     private MainUiState currentState;
@@ -37,10 +37,10 @@ public final class MainActivity extends AppCompatActivity {
     private Button refreshButton;
     private Button logoutButton;
 
-    private ListView catalogList;
+    private RecyclerView catalogList;
     private ListView dictionaryList;
 
-    private ArrayAdapter<String> catalogAdapter;
+    private WordAdapter catalogAdapter;
     private ArrayAdapter<String> dictionaryAdapter;
 
     @Override
@@ -48,18 +48,19 @@ public final class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Log.d(TAG, "MainActivity created");
-
         AuthUi.applyInsets(this, findViewById(R.id.mainRoot));
 
         bindViews();
-        configureLists();
 
         model = new ViewModelProvider(this, new MainViewModelFactory(this)).get(MainViewModel.class);
 
+        configureLists();
         configureActions();
 
         model.getState().observe(this, this::render);
+
+        // Данные репозитория поступают в адаптер через LiveData.
+        model.getCatalog().observe(this, catalogAdapter::setItems);
     }
 
     private void bindViews() {
@@ -79,10 +80,16 @@ public final class MainActivity extends AppCompatActivity {
     }
 
     private void configureLists() {
-        catalogAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new ArrayList<>());
-        dictionaryAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new ArrayList<>());
+        catalogAdapter = new WordAdapter(word -> {
+            if (currentState != null && !currentState.isLoading()) {
+                model.addToDictionary(word);
+            }
+        });
 
+        catalogList.setLayoutManager(new LinearLayoutManager(this));
         catalogList.setAdapter(catalogAdapter);
+
+        dictionaryAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new ArrayList<String>());
         dictionaryList.setAdapter(dictionaryAdapter);
     }
 
@@ -90,31 +97,17 @@ public final class MainActivity extends AppCompatActivity {
         refreshButton.setOnClickListener(view -> model.refresh());
         logoutButton.setOnClickListener(view -> model.logout());
 
-        catalogList.setOnItemClickListener(
-                (parent, view, position, id) -> {
-                    if (currentState == null
-                            || currentState.isLoading()
-                            || position >= currentState.getCatalog().size()) {
-                        return;
-                    }
+        dictionaryList.setOnItemLongClickListener((parent, view, position, id) -> {
+            if (currentState == null || currentState.isLoading()) {
+                return true;
+            }
 
-                    model.addToDictionary(currentState.getCatalog().get(position));
-                }
-        );
+            if (position < currentState.getDictionary().size()) {
+                model.removeFromDictionary(currentState.getDictionary().get(position));
+            }
 
-        dictionaryList.setOnItemLongClickListener(
-                (parent, view, position, id) -> {
-                    if (currentState == null
-                            || currentState.isLoading()
-                            || position >= currentState.getDictionary().size()) {
-                        return true;
-                    }
-
-                    model.removeFromDictionary(currentState.getDictionary().get(position));
-
-                    return true;
-                }
-        );
+            return true;
+        });
     }
 
     private void render(MainUiState state) {
@@ -128,29 +121,25 @@ public final class MainActivity extends AppCompatActivity {
         boolean loading = state.isLoading();
 
         progress.setVisibility(loading ? View.VISIBLE : View.GONE);
-
         refreshButton.setEnabled(!loading);
         logoutButton.setEnabled(!loading);
-        catalogList.setEnabled(!loading);
         dictionaryList.setEnabled(!loading);
 
         errorText.setText(state.getError());
         errorText.setVisibility(state.getError().isEmpty() ? View.GONE : View.VISIBLE);
 
         if (state.getUser() != null) {
-            String name = state.getUser().getName().isEmpty()
-                    ? state.getUser().getEmail()
-                    : state.getUser().getName();
+            String name = state.getUser().getName();
+
+            if (name.isEmpty()) {
+                name = state.getUser().getEmail();
+            }
 
             welcomeText.setText("Здравствуйте, " + name + "!");
             emailText.setText(state.getUser().getEmail());
         }
 
         dictionaryTitle.setText("Мой словарь: " + state.getDictionary().size());
-
-        catalogAdapter.clear();
-        catalogAdapter.addAll(state.getCatalogRows());
-        catalogAdapter.notifyDataSetChanged();
 
         dictionaryAdapter.clear();
         dictionaryAdapter.addAll(state.getDictionaryRows());
@@ -164,15 +153,7 @@ public final class MainActivity extends AppCompatActivity {
 
         Intent intent = new Intent(this, LoginActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-
         startActivity(intent);
         finish();
-    }
-
-    @Override
-    protected void onDestroy() {
-        Log.d(TAG, "MainActivity destroyed; changingConfigurations=" + isChangingConfigurations());
-
-        super.onDestroy();
     }
 }

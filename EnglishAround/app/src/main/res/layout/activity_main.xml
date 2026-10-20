@@ -69,12 +69,11 @@
         android:text="Нажмите на слово, чтобы добавить его в словарь"
         android:textSize="13sp" />
 
-    <ListView
+    <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/catalogList"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="4dp" />
+        android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1" android:layout_marginTop="4dp"
+        android:clipToPadding="false" />
 
     <TextView
         android:id="@+id/dictionaryTitle"
