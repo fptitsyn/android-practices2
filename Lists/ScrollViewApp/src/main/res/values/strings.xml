@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Геометрическая прогрессия</string>
+    <string name="screen_title">Геометрическая прогрессия</string>
+    <string name="screen_subtitle">Первый член — 1, знаменатель — 2. Всего 100 элементов.</string>
+    <string name="progression_item">%1$d. %2$s</string>
+</resources>

@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Книги на ближайшие 30 лет</string>
+    <string name="screen_title">План чтения на 30 лет</string>
+    <string name="screen_subtitle">36 книг и их авторы</string>
+</resources>
