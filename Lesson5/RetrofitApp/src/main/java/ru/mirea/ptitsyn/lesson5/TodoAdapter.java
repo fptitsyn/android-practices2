@@ -59,7 +59,6 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoViewHolder> {
         boolean completed = Boolean.TRUE.equals(todo.getCompleted());
         holder.textViewTitle.setText(todo.getTitle());
 
-        // При переиспользовании строки setChecked не должен отправлять новый запрос.
         holder.checkBoxCompleted.setOnCheckedChangeListener(null);
         holder.checkBoxCompleted.setChecked(completed);
         holder.checkBoxCompleted.setEnabled(!updatingIds.contains(todo.getId()));
@@ -76,7 +75,6 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoViewHolder> {
         params.height = imageSizePx;
         holder.imageViewTodo.setLayoutParams(params);
 
-        // Todo не содержит изображений: для каждого id используем отдельную иллюстрацию Picsum.
         String imageUrl = "https://picsum.photos/seed/todo" + todo.getId() + "/400/300";
         RequestCreator request = Picasso.get().load(imageUrl).tag(this)
                 .placeholder(R.drawable.image_placeholder).error(R.drawable.image_error);

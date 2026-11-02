@@ -13,6 +13,7 @@ import ru.mirea.ptitsyn.data.repository.UserDictionaryRepositoryImpl;
 import ru.mirea.ptitsyn.data.repository.UserRepositoryImpl;
 import ru.mirea.ptitsyn.data.repository.WordRepositoryImpl;
 import ru.mirea.ptitsyn.data.storage.UserPreferences;
+import ru.mirea.ptitsyn.data.network.NetworkApi;
 
 import ru.mirea.ptitsyn.domain.repository.AuthRepository;
 import ru.mirea.ptitsyn.domain.repository.UserDictionaryRepository;
@@ -36,7 +37,7 @@ public final class MainViewModelFactory implements ViewModelProvider.Factory {
 
         AuthRepository authRepository = new AuthRepositoryImpl();
         UserRepository userRepository = new UserRepositoryImpl(new UserPreferences(applicationContext));
-        WordRepository wordRepository = new WordRepositoryImpl();
+        WordRepository wordRepository = new WordRepositoryImpl(new NetworkApi());
 
         UserDictionaryRepository dictionaryRepository =
                 new UserDictionaryRepositoryImpl(AppDatabase.getInstance(applicationContext).dictionaryWordDao());

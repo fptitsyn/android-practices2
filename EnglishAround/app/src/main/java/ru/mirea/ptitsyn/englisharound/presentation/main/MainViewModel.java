@@ -30,6 +30,9 @@ import ru.mirea.ptitsyn.domain.usecases.catalog.GetWordCatalogUseCase;
 import ru.mirea.ptitsyn.domain.usecases.dict.AddWordToDictionaryUseCase;
 import ru.mirea.ptitsyn.domain.usecases.dict.GetPersonalDictionaryUseCase;
 import ru.mirea.ptitsyn.domain.usecases.dict.RemoveWordFromDictionaryUseCase;
+import ru.mirea.ptitsyn.domain.models.WordDetails;
+import ru.mirea.ptitsyn.domain.repository.RepositoryException;
+import ru.mirea.ptitsyn.domain.usecases.catalog.GetWordDetailsUseCase;
 
 public final class MainViewModel extends ViewModel {
 
@@ -66,6 +69,10 @@ public final class MainViewModel extends ViewModel {
 
     private volatile boolean cleared;
 
+    private final GetWordDetailsUseCase getWordDetails;
+    private final MutableLiveData<DictionaryState> dictionaryState = new MutableLiveData<>();
+    private long dictionaryRequestId;
+
     public MainViewModel(
             AuthRepository authRepository,
             UserRepository userRepository,
@@ -80,12 +87,12 @@ public final class MainViewModel extends ViewModel {
         logoutUser = new LogoutUserUseCase(authRepository);
 
         getCatalog = new GetWordCatalogUseCase(wordRepository);
-
         getDictionary = new GetPersonalDictionaryUseCase(dictionaryRepository);
 
         addWord = new AddWordToDictionaryUseCase(dictionaryRepository);
-
         removeWord = new RemoveWordFromDictionaryUseCase(dictionaryRepository);
+
+        getWordDetails = new GetWordDetailsUseCase(wordRepository);
 
         state.addSource(catalogSource, words -> publishState());
         state.addSource(dictionarySource, words -> publishState());
@@ -305,5 +312,47 @@ public final class MainViewModel extends ViewModel {
 
     public LiveData<List<Word>> getCatalog() {
         return Transformations.map(state, MainUiState::getCatalog);
+    }
+
+    public LiveData<DictionaryState> getDictionaryState() {
+        return dictionaryState;
+    }
+
+    public void loadWordDetails(String word) {
+        if (cleared) {
+            return;
+        }
+
+        long requestId = ++dictionaryRequestId;
+        dictionaryState.setValue(new DictionaryState(true, null, ""));
+
+        worker.execute(() -> {
+            try {
+                WordDetails details = getWordDetails.execute(word);
+
+                mainExecutor.execute(() -> {
+                    if (!cleared && requestId == dictionaryRequestId) {
+                        dictionaryState.setValue(new DictionaryState(false, details, ""));
+                    }
+                });
+
+            } catch (Exception exception) {
+                Log.e("MainViewModel", "Dictionary request failed", exception);
+
+                String message = exception instanceof RepositoryException
+                        ? exception.getMessage() : "Не удалось получить словарную статью";
+
+                mainExecutor.execute(() -> {
+                    if (!cleared && requestId == dictionaryRequestId) {
+                        dictionaryState.setValue(new DictionaryState(false, null, message));
+                    }
+                });
+            }
+        });
+    }
+
+    public void clearDictionaryState() {
+        dictionaryRequestId++;
+        dictionaryState.setValue(null);
     }
 }

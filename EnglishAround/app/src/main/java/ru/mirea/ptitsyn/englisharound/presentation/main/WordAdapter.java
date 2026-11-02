@@ -3,10 +3,13 @@ package ru.mirea.ptitsyn.englisharound.presentation.main;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,10 +24,12 @@ public final class WordAdapter extends RecyclerView.Adapter<WordAdapter.WordView
     }
 
     private final List<Word> items = new ArrayList<>();
-    private final OnWordClickListener listener;
+    private final OnWordClickListener clickListener;
+    private final OnWordClickListener longClickListener;
 
-    public WordAdapter(OnWordClickListener listener) {
-        this.listener = listener;
+    public WordAdapter(OnWordClickListener clickListener, OnWordClickListener longClickListener) {
+        this.clickListener = clickListener;
+        this.longClickListener = longClickListener;
     }
 
     public void setItems(List<Word> words) {
@@ -44,8 +49,35 @@ public final class WordAdapter extends RecyclerView.Adapter<WordAdapter.WordView
     @Override
     public void onBindViewHolder(@NonNull WordViewHolder holder, int position) {
         Word word = items.get(position);
-        holder.bind(word);
-        holder.itemView.setOnClickListener(view -> listener.onWordClick(word));
+
+        holder.englishText.setText(word.getEnglish());
+        holder.translationText.setText(word.getTranslation());
+
+        holder.itemView.setOnClickListener(view -> clickListener.onWordClick(word));
+
+        holder.itemView.setOnLongClickListener(view -> {
+            longClickListener.onWordClick(word);
+            return true;
+        });
+
+        Picasso.get().cancelRequest(holder.image);
+        holder.image.setImageResource(R.drawable.word_placeholder);
+
+        String imageUrl = word.getImageUrl().trim();
+
+        if (imageUrl.isEmpty()) {
+            return;
+        }
+
+        if (!imageUrl.startsWith("https://")) {
+            holder.image.setImageResource(R.drawable.word_image_error);
+            return;
+        }
+
+        int size = Math.round(80 * holder.itemView.getResources().getDisplayMetrics().density);
+
+        Picasso.get().load(imageUrl).resize(size, size).centerCrop()
+                .placeholder(R.drawable.word_placeholder).error(R.drawable.word_image_error).into(holder.image);
     }
 
     @Override
@@ -53,20 +85,25 @@ public final class WordAdapter extends RecyclerView.Adapter<WordAdapter.WordView
         return items.size();
     }
 
-    public static final class WordViewHolder extends RecyclerView.ViewHolder {
+    @Override
+    public void onViewRecycled(@NonNull WordViewHolder holder) {
+        Picasso.get().cancelRequest(holder.image);
+        holder.image.setImageDrawable(null);
+        holder.itemView.setOnClickListener(null);
+        holder.itemView.setOnLongClickListener(null);
+        super.onViewRecycled(holder);
+    }
 
+    public static final class WordViewHolder extends RecyclerView.ViewHolder {
+        private final ImageView image;
         private final TextView englishText;
         private final TextView translationText;
 
         public WordViewHolder(@NonNull View itemView) {
             super(itemView);
+            image = itemView.findViewById(R.id.wordImage);
             englishText = itemView.findViewById(R.id.wordEnglishText);
             translationText = itemView.findViewById(R.id.wordTranslationText);
-        }
-
-        public void bind(Word word) {
-            englishText.setText(word.getEnglish());
-            translationText.setText(word.getTranslation());
         }
     }
 }

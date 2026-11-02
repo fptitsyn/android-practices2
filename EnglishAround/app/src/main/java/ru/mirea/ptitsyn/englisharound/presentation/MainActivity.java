@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.appcompat.app.AlertDialog;
 
 import java.util.ArrayList;
 
@@ -22,6 +23,9 @@ import ru.mirea.ptitsyn.englisharound.presentation.main.MainUiState;
 import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModel;
 import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModelFactory;
 import ru.mirea.ptitsyn.englisharound.presentation.main.WordAdapter;
+import ru.mirea.ptitsyn.englisharound.presentation.main.DictionaryState;
+
+import ru.mirea.ptitsyn.domain.models.WordDetails;
 
 public final class MainActivity extends AppCompatActivity {
 
@@ -42,6 +46,7 @@ public final class MainActivity extends AppCompatActivity {
 
     private WordAdapter catalogAdapter;
     private ArrayAdapter<String> dictionaryAdapter;
+    private AlertDialog dictionaryDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,8 +64,9 @@ public final class MainActivity extends AppCompatActivity {
 
         model.getState().observe(this, this::render);
 
-        // Данные репозитория поступают в адаптер через LiveData.
         model.getCatalog().observe(this, catalogAdapter::setItems);
+
+        model.getDictionaryState().observe(this, this::renderDictionaryState);
     }
 
     private void bindViews() {
@@ -80,11 +86,14 @@ public final class MainActivity extends AppCompatActivity {
     }
 
     private void configureLists() {
-        catalogAdapter = new WordAdapter(word -> {
-            if (currentState != null && !currentState.isLoading()) {
-                model.addToDictionary(word);
-            }
-        });
+        catalogAdapter = new WordAdapter(
+                word -> model.loadWordDetails(word.getEnglish()),
+                word -> {
+                    if (currentState != null && !currentState.isLoading()) {
+                        model.addToDictionary(word);
+                    }
+                }
+        );
 
         catalogList.setLayoutManager(new LinearLayoutManager(this));
         catalogList.setAdapter(catalogAdapter);
@@ -155,5 +164,77 @@ public final class MainActivity extends AppCompatActivity {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+    }
+
+    private void renderDictionaryState(DictionaryState state) {
+        if (state == null) {
+            if (dictionaryDialog != null) {
+                dictionaryDialog.setOnDismissListener(null);
+                dictionaryDialog.dismiss();
+                dictionaryDialog = null;
+            }
+            return;
+        }
+
+        if (dictionaryDialog == null) {
+            dictionaryDialog = new AlertDialog.Builder(this)
+                    .setTitle("Словарь").setMessage("Загрузка…").setPositiveButton("Закрыть", null).create();
+
+            dictionaryDialog.setOnDismissListener(dialog -> {
+                dictionaryDialog = null;
+                model.clearDictionaryState();
+            });
+
+            dictionaryDialog.show();
+        }
+
+        if (state.isLoading()) {
+            dictionaryDialog.setTitle("Словарь");
+            dictionaryDialog.setMessage("Загрузка словарной статьи…");
+            return;
+        }
+
+        if (!state.getError().isEmpty()) {
+            dictionaryDialog.setTitle("Не удалось загрузить статью");
+            dictionaryDialog.setMessage(state.getError());
+            return;
+        }
+
+        WordDetails details = state.getDetails();
+
+        if (details == null) {
+            dictionaryDialog.setMessage("Словарная статья отсутствует");
+            return;
+        }
+
+        StringBuilder text = new StringBuilder();
+
+        if (!details.getPhonetic().isEmpty()) {
+            text.append("Транскрипция: ").append(details.getPhonetic()).append("\n\n");
+        }
+
+        if (!details.getPartOfSpeech().isEmpty()) {
+            text.append("Часть речи: ").append(details.getPartOfSpeech()).append("\n\n");
+        }
+
+        text.append("Определение:\n").append(details.getDefinition());
+
+        if (!details.getExample().isEmpty()) {
+            text.append("\n\nПример:\n").append(details.getExample());
+        }
+
+        dictionaryDialog.setTitle(details.getWord());
+        dictionaryDialog.setMessage(text.toString());
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (dictionaryDialog != null) {
+            dictionaryDialog.setOnDismissListener(null);
+            dictionaryDialog.dismiss();
+            dictionaryDialog = null;
+        }
+
+        super.onDestroy();
     }
 }

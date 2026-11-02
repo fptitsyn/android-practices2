@@ -35,8 +35,10 @@ android {
 dependencies {
     implementation(project(":domain"))
     implementation(libs.firebase.auth)
-    api("androidx.room:room-runtime:2.8.4")
-    annotationProcessor("androidx.room:room-compiler:2.8.4")
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+    api(libs.room.runtime)
+    annotationProcessor(libs.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
