@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">RetrofitApp</string>
+    <string name="screen_title">Список дел</string>
+    <string name="loading">Загрузка списка дел…</string>
+    <string name="empty_list">Список дел пуст</string>
+    <string name="completed">Выполнено</string>
+    <string name="not_completed">Не выполнено</string>
+    <string name="load_http_error">Не удалось загрузить список. HTTP %1$d.</string>
+    <string name="load_network_error">Не удалось загрузить данные. Проверьте подключение к интернету.</string>
+    <string name="update_success">Сервер подтвердил обновление</string>
+    <string name="update_http_error">Не удалось обновить дело. HTTP %1$d.</string>
+    <string name="update_network_error">Ошибка обновления. Предыдущий статус восстановлен.</string>
+    <string name="server_notice">JSONPlaceholder имитирует сохранение: после перезапуска статусы сбрасываются.</string>
+    <string name="size_prompt">Размер изображений</string>
+    <string name="mode_prompt">Способ отображения</string>
+    <string-array name="image_sizes">
+        <item>Маленькие</item>
+        <item>Средние</item>
+        <item>Большие</item>
+    </string-array>
+    <string-array name="image_modes">
+        <item>Обрезать</item>
+        <item>Вписать</item>
+    </string-array>
+</resources>

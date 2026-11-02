@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:padding="16dp" android:text="@string/screen_title" android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:paddingStart="8dp" android:paddingEnd="8dp">
+
+        <Spinner android:id="@+id/sizeSpinner" android:layout_width="0dp" android:layout_height="48dp"
+            android:layout_weight="1" android:entries="@array/image_sizes" android:prompt="@string/size_prompt"
+            android:contentDescription="@string/size_prompt" />
+
+        <Spinner android:id="@+id/scaleSpinner" android:layout_width="0dp" android:layout_height="48dp"
+            android:layout_weight="1" android:entries="@array/image_modes" android:prompt="@string/mode_prompt"
+            android:contentDescription="@string/mode_prompt" />
+
+    </LinearLayout>
+
+    <TextView android:id="@+id/messageText" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:padding="12dp" android:textSize="13sp" />
+
+    <ProgressBar android:id="@+id/progressBar" style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent" android:layout_height="4dp" android:indeterminate="true"
+        android:visibility="gone" />
+
+    <androidx.recyclerview.widget.RecyclerView android:id="@+id/recyclerView"
+        android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+</LinearLayout>
