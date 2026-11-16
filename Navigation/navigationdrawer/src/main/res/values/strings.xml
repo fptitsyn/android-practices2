@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Книжная полка</string>
+    <string name="books_label">Книги</string>
+    <string name="books_title">Моя книжная полка</string>
+    <string name="books_subtitle">Подборка для чтения</string>
+    <string name="books_body">Михаил Булгаков — Мастер и Маргарита\n\nДжордж Оруэлл — 1984\n\nРэй Брэдбери — 451 градус по Фаренгейту\n\nДжек Лондон — Мартин Иден\n\nОскар Уайльд — Портрет Дориана Грея</string>
+    <string name="categories_label">Категории</string>
+    <string name="categories_title">Категории книг</string>
+    <string name="categories_subtitle">Выбирайте чтение по настроению</string>
+    <string name="categories_body">Классическая литература\nРоманы о человеке и обществе.\n\nФантастика\nПроизведения о возможном будущем и необычных мирах.\n\nАнтиутопия\nИстории об обществе и границах свободы.</string>
+    <string name="about_label">О приложении</string>
+    <string name="about_title">О книжной полке</string>
+    <string name="about_subtitle">Пример Navigation Drawer</string>
+    <string name="about_body">16.11.2026</string>
+    <string name="drawer_subtitle">Список чтения и категории</string>
+</resources>

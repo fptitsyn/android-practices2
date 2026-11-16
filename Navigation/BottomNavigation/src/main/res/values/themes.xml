@@ -1,0 +1,11 @@
+<resources>
+    <style name="Theme.Navigation" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/nav_primary</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">@color/nav_primary</item>
+        <item name="colorSurface">@color/nav_surface</item>
+        <item name="colorOnSurface">@color/nav_on_surface</item>
+        <item name="android:colorBackground">@color/nav_background</item>
+        <item name="android:windowBackground">@color/nav_background</item>
+    </style>
+</resources>

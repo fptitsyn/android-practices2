@@ -1,0 +1,7 @@
+<resources>
+    <color name="nav_primary">#006B5F</color>
+    <color name="nav_background">#F1F8F5</color>
+    <color name="nav_surface">#FFFFFF</color>
+    <color name="nav_on_surface">#1C1B1F</color>
+    <color name="nav_toolbar">#006B5F</color>
+</resources>

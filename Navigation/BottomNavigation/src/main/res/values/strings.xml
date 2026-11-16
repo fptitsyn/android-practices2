@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Учебный органайзер</string>
+    <string name="home_label">Главная</string>
+    <string name="home_title">Учебный план</string>
+    <string name="home_subtitle">Дела на ближайшие занятия</string>
+    <string name="home_body">1. Повторить жизненный цикл Fragment.\n\n2. Изучить Navigation Component.\n\n3. Подготовить экраны приложения.\n\n4. Оформить результаты практической работы.</string>
+    <string name="info_label">Заметки</string>
+    <string name="info_title">Конспект по навигации</string>
+    <string name="info_subtitle">Ключевые понятия</string>
+    <string name="info_body">NavHostFragment — контейнер экранов.\n\nNavGraph — граф пунктов назначения.\n\nNavController — управляет переходами и историей экранов.\n\nNavigationUI — связывает контроллер с меню и верхней панелью.</string>
+    <string name="profile_label">Профиль</string>
+    <string name="profile_title">Профиль студента</string>
+    <string name="profile_subtitle">Учебный органайзер</string>
+    <string name="profile_body">Студент: Фёдор Птицын\n\nНомер по списку: 20\n\nДисциплина: разработка мобильных приложений.</string>
+    <string name="drawer_subtitle">Список чтения и категории</string>
+</resources>

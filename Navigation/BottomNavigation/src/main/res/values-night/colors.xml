@@ -1,0 +1,7 @@
+<resources>
+    <color name="nav_primary">#BBCBEE</color>
+    <color name="nav_background">#141B20</color>
+    <color name="nav_surface">#202A30</color>
+    <color name="nav_on_surface">#E7EDF0</color>
+    <color name="nav_toolbar">#455A9C</color>
+</resources>
