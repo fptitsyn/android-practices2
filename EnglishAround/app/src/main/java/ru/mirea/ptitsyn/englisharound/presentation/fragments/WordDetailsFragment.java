@@ -11,11 +11,13 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.fragment.NavHostFragment;
 
 import com.squareup.picasso.Picasso;
 
 import ru.mirea.ptitsyn.domain.models.WordDetails;
 import ru.mirea.ptitsyn.englisharound.R;
+import ru.mirea.ptitsyn.englisharound.presentation.main.DictionaryState;
 import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModel;
 import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModelFactory;
 
@@ -58,17 +60,19 @@ public final class WordDetailsFragment extends Fragment {
         Button retryButton = view.findViewById(R.id.retryButton);
 
         view.findViewById(R.id.backButton).setOnClickListener(button -> {
-            getParentFragmentManager().popBackStack();
+            NavHostFragment.findNavController(this).navigateUp();
         });
 
         retryButton.setOnClickListener(button -> model.loadWordDetails(english));
 
-        if (savedInstanceState == null || model.getDictionaryState().getValue() == null) {
+        DictionaryState current = model.getDictionaryState().getValue();
+
+        if (current == null || !english.equalsIgnoreCase(current.getWord())) {
             model.loadWordDetails(english);
         }
 
         model.getDictionaryState().observe(getViewLifecycleOwner(), state -> {
-            if (state == null) {
+            if (state == null || !english.equalsIgnoreCase(state.getWord())) {
                 return;
             }
 

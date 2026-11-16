@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main_navigation_graph"
+    app:startDestination="@id/nav_catalog">
+
+    <fragment
+        android:id="@+id/nav_catalog"
+        android:name="ru.mirea.ptitsyn.englisharound.presentation.fragments.CatalogFragment"
+        android:label="Каталог"
+        tools:layout="@layout/fragment_word_list">
+
+        <action
+            android:id="@+id/action_catalog_to_word_details"
+            app:destination="@id/nav_word_details" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_dictionary"
+        android:name="ru.mirea.ptitsyn.englisharound.presentation.fragments.PersonalDictionaryFragment"
+        android:label="Мой словарь"
+        tools:layout="@layout/fragment_word_list">
+
+        <action
+            android:id="@+id/action_dictionary_to_word_details"
+            app:destination="@id/nav_word_details" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_profile"
+        android:name="ru.mirea.ptitsyn.englisharound.presentation.fragments.ProfileFragment"
+        android:label="Профиль"
+        tools:layout="@layout/fragment_profile" />
+
+    <fragment
+        android:id="@+id/nav_word_details"
+        android:name="ru.mirea.ptitsyn.englisharound.presentation.fragments.WordDetailsFragment"
+        android:label="{english}"
+        tools:layout="@layout/fragment_word_details">
+
+        <argument
+            android:name="english"
+            app:argType="string" />
+
+        <argument
+            android:name="translation"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <argument
+            android:name="image_url"
+            app:argType="string"
+            android:defaultValue="" />
+
+    </fragment>
+
+</navigation>

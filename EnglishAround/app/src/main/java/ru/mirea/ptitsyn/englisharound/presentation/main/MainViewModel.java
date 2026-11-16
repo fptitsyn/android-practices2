@@ -304,16 +304,18 @@ public final class MainViewModel extends ViewModel {
             return;
         }
 
+        String requestedWord = word == null ? "" : word.trim();
         long requestId = ++dictionaryRequestId;
-        dictionaryState.setValue(new DictionaryState(true, null, ""));
+
+        dictionaryState.setValue(new DictionaryState(requestedWord, true, null, ""));
 
         worker.execute(() -> {
             try {
-                WordDetails details = getWordDetails.execute(word);
+                WordDetails details = getWordDetails.execute(requestedWord);
 
                 mainExecutor.execute(() -> {
                     if (!cleared && requestId == dictionaryRequestId) {
-                        dictionaryState.setValue(new DictionaryState(false, details, ""));
+                        dictionaryState.setValue(new DictionaryState(requestedWord, false, details, ""));
                     }
                 });
 
@@ -325,7 +327,7 @@ public final class MainViewModel extends ViewModel {
 
                 mainExecutor.execute(() -> {
                     if (!cleared && requestId == dictionaryRequestId) {
-                        dictionaryState.setValue(new DictionaryState(false, null, message));
+                        dictionaryState.setValue(new DictionaryState(requestedWord, false, null, message));
                     }
                 });
             }
