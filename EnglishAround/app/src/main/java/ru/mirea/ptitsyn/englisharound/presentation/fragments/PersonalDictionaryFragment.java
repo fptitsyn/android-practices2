@@ -10,6 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.fragment.NavHostFragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -80,7 +81,7 @@ public final class PersonalDictionaryFragment extends Fragment {
         arguments.putString("translation", word.getTranslation());
         arguments.putString("image_url", word.getImageUrl());
 
-        getParentFragmentManager().setFragmentResult("open_word", arguments);
+        NavHostFragment.findNavController(this).navigate(R.id.action_dictionary_to_word_details, arguments);
     }
 
     @Override
