@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">FragmentApp</string>
+    <string name="student_number">Номер по списку: %1$d</string>
+    <string name="todo_hint">Список дел. Галочка обозначает выполненное дело.</string>
+    <string-array name="todos">
+        <item>Изучить жизненный цикл Fragment</item>
+        <item>Передать номер по списку через Bundle</item>
+        <item>Создать список и экран подробностей</item>
+        <item>Реализовать общую ViewModel</item>
+        <item>Передать текст через Fragment Result API</item>
+    </string-array>
+</resources>

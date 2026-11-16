@@ -24,4 +24,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Lesson5"
 include(":RetrofitApp")
- 
+include(":fragmentapp")
+include(":FragmentManagerApp", ":ResultApiFragmentApp")

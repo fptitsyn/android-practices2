@@ -43,6 +43,7 @@ android {
 dependencies {
     implementation(project(":domain"))
     implementation(project(":data"))
+    implementation(libs.fragment)
     implementation(libs.picasso)
     implementation(libs.recyclerview)
     implementation(libs.lifecycle.viewmodel)

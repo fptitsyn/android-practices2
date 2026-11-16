@@ -37,13 +37,9 @@ import ru.mirea.ptitsyn.domain.usecases.catalog.GetWordDetailsUseCase;
 public final class MainViewModel extends ViewModel {
 
     private static final String TAG = "MainViewModel";
-
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
-
     private final Executor mainExecutor;
-
     private final UserRepository userRepository;
-
     private final GetCurrentUserUseCase getCurrentUser;
     private final LogoutUserUseCase logoutUser;
     private final GetWordCatalogUseCase getCatalog;
@@ -51,15 +47,12 @@ public final class MainViewModel extends ViewModel {
     private final AddWordToDictionaryUseCase addWord;
     private final RemoveWordFromDictionaryUseCase removeWord;
 
-    // Источник № 1: результат получения каталога из NetworkApi.
     private final MutableLiveData<List<Word>> catalogSource =
             new MutableLiveData<>(Collections.emptyList());
 
-    // Источник № 2: результат чтения личного словаря из Room.
     private final MutableLiveData<List<Word>> dictionarySource =
             new MutableLiveData<>(Collections.emptyList());
 
-    // Общее состояние экрана, зависящее от обоих источников.
     private final MediatorLiveData<MainUiState> state = new MediatorLiveData<>();
 
     private User currentUser;
@@ -97,8 +90,6 @@ public final class MainViewModel extends ViewModel {
         state.addSource(catalogSource, words -> publishState());
         state.addSource(dictionarySource, words -> publishState());
 
-        Log.d(TAG, "MainViewModel created");
-
         refresh();
     }
 
@@ -124,7 +115,6 @@ public final class MainViewModel extends ViewModel {
                         );
                     }
 
-                    // SharedPreferences: сохраняем и читаем профиль.
                     userRepository.saveUser(authenticatedUser);
                     User localUser = userRepository.getUser();
 
@@ -134,10 +124,8 @@ public final class MainViewModel extends ViewModel {
                         );
                     }
 
-                    // Сетевая заглушка.
                     List<Word> catalog = getCatalog.execute();
 
-                    // Room.
                     List<Word> dictionary = getDictionary.execute(
                             localUser.getId()
                     );
@@ -271,12 +259,8 @@ public final class MainViewModel extends ViewModel {
 
         state.setValue(new MainUiState(
                         currentUser,
-                        catalog == null
-                                ? Collections.emptyList()
-                                : catalog,
-                        dictionary == null
-                                ? Collections.emptyList()
-                                : dictionary,
+                        catalog == null ? Collections.emptyList() : catalog,
+                        dictionary == null ? Collections.emptyList() : dictionary,
                         loading,
                         signedOut,
                         error
@@ -288,9 +272,6 @@ public final class MainViewModel extends ViewModel {
     protected void onCleared() {
         cleared = true;
         worker.shutdown();
-
-        Log.d(TAG, "MainViewModel cleared");
-
         super.onCleared();
     }
 

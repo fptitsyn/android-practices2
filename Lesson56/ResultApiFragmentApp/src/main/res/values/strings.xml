@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">ResultApiFragmentApp</string>
+    <string name="screen_title">Передача данных между фрагментами</string>
+    <string name="input_hint">Введите текст</string>
+    <string name="send_to_sheet">Передать в BottomSheet</string>
+    <string name="send_to_activity">Передать в Activity через интерфейс</string>
+    <string name="result_hint">Здесь Activity покажет результат вызова интерфейса</string>
+    <string name="activity_result">Activity получила: %1$s</string>
+    <string name="sheet_title">Данные из DataFragment</string>
+    <string name="empty_text">Передана пустая строка</string>
+    <string name="close">Закрыть</string>
+</resources>

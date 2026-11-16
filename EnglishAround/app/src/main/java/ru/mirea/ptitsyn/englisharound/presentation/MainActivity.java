@@ -2,51 +2,28 @@ package ru.mirea.ptitsyn.englisharound.presentation;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.ListView;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-import androidx.appcompat.app.AlertDialog;
 
-import java.util.ArrayList;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import ru.mirea.ptitsyn.englisharound.R;
 import ru.mirea.ptitsyn.englisharound.presentation.auth.AuthUi;
-import ru.mirea.ptitsyn.englisharound.presentation.main.MainUiState;
+import ru.mirea.ptitsyn.englisharound.presentation.fragments.CatalogFragment;
+import ru.mirea.ptitsyn.englisharound.presentation.fragments.PersonalDictionaryFragment;
+import ru.mirea.ptitsyn.englisharound.presentation.fragments.ProfileFragment;
+import ru.mirea.ptitsyn.englisharound.presentation.fragments.WordDetailsFragment;
 import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModel;
 import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModelFactory;
-import ru.mirea.ptitsyn.englisharound.presentation.main.WordAdapter;
-import ru.mirea.ptitsyn.englisharound.presentation.main.DictionaryState;
-
-import ru.mirea.ptitsyn.domain.models.WordDetails;
 
 public final class MainActivity extends AppCompatActivity {
 
-    private MainViewModel model;
-    private MainUiState currentState;
-
-    private TextView welcomeText;
-    private TextView emailText;
-    private TextView errorText;
-    private TextView dictionaryTitle;
-
-    private ProgressBar progress;
-    private Button refreshButton;
-    private Button logoutButton;
-
-    private RecyclerView catalogList;
-    private ListView dictionaryList;
-
-    private WordAdapter catalogAdapter;
-    private ArrayAdapter<String> dictionaryAdapter;
-    private AlertDialog dictionaryDialog;
+    private static final String ROOT_KEY = "current_root";
+    private int currentRoot = R.id.nav_catalog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,104 +32,77 @@ public final class MainActivity extends AppCompatActivity {
 
         AuthUi.applyInsets(this, findViewById(R.id.mainRoot));
 
-        bindViews();
+        MainViewModel model = new ViewModelProvider(this, new MainViewModelFactory(this)).get(MainViewModel.class);
 
-        model = new ViewModelProvider(this, new MainViewModelFactory(this)).get(MainViewModel.class);
-
-        configureLists();
-        configureActions();
-
-        model.getState().observe(this, this::render);
-
-        model.getCatalog().observe(this, catalogAdapter::setItems);
-
-        model.getDictionaryState().observe(this, this::renderDictionaryState);
-    }
-
-    private void bindViews() {
-        welcomeText = findViewById(R.id.welcomeText);
-        emailText = findViewById(R.id.emailText);
-        errorText = findViewById(R.id.errorText);
-        dictionaryTitle = findViewById(R.id.dictionaryTitle);
-
-        progress = findViewById(R.id.progress);
-        refreshButton = findViewById(R.id.refreshButton);
-        logoutButton = findViewById(R.id.logoutButton);
-
-        catalogList = findViewById(R.id.catalogList);
-        dictionaryList = findViewById(R.id.dictionaryList);
-
-        dictionaryList.setEmptyView(findViewById(R.id.dictionaryEmptyText));
-    }
-
-    private void configureLists() {
-        catalogAdapter = new WordAdapter(
-                word -> model.loadWordDetails(word.getEnglish()),
-                word -> {
-                    if (currentState != null && !currentState.isLoading()) {
-                        model.addToDictionary(word);
-                    }
-                }
-        );
-
-        catalogList.setLayoutManager(new LinearLayoutManager(this));
-        catalogList.setAdapter(catalogAdapter);
-
-        dictionaryAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new ArrayList<String>());
-        dictionaryList.setAdapter(dictionaryAdapter);
-    }
-
-    private void configureActions() {
-        refreshButton.setOnClickListener(view -> model.refresh());
-        logoutButton.setOnClickListener(view -> model.logout());
-
-        dictionaryList.setOnItemLongClickListener((parent, view, position, id) -> {
-            if (currentState == null || currentState.isLoading()) {
-                return true;
+        model.getState().observe(this, state -> {
+            if (state.isSignedOut()) {
+                openLogin();
             }
+        });
 
-            if (position < currentState.getDictionary().size()) {
-                model.removeFromDictionary(currentState.getDictionary().get(position));
+        getSupportFragmentManager().setFragmentResultListener("open_word", this, (requestKey, bundle) -> {
+            openWordDetails(bundle);
+        });
+
+        BottomNavigationView navigation = findViewById(R.id.bottomNavigation);
+
+        if (savedInstanceState == null) {
+            showRoot(R.id.nav_catalog);
+        } else {
+            currentRoot = savedInstanceState.getInt(ROOT_KEY, R.id.nav_catalog);
+        }
+
+        navigation.getMenu().findItem(currentRoot).setChecked(true);
+
+        navigation.setOnItemSelectedListener(item -> {
+            if (item.getItemId() != currentRoot) {
+                showRoot(item.getItemId());
             }
-
             return true;
+        });
+
+        navigation.setOnItemReselectedListener(item -> {
+            if (getSupportFragmentManager().getBackStackEntryCount() > 0) {
+                showRoot(item.getItemId());
+            }
         });
     }
 
-    private void render(MainUiState state) {
-        currentState = state;
+    private void showRoot(int itemId) {
+        FragmentManager manager = getSupportFragmentManager();
 
-        if (state.isSignedOut()) {
-            openLogin();
+        if (manager.isStateSaved()) {
             return;
         }
 
-        boolean loading = state.isLoading();
+        Class<? extends Fragment> fragmentClass;
 
-        progress.setVisibility(loading ? View.VISIBLE : View.GONE);
-        refreshButton.setEnabled(!loading);
-        logoutButton.setEnabled(!loading);
-        dictionaryList.setEnabled(!loading);
-
-        errorText.setText(state.getError());
-        errorText.setVisibility(state.getError().isEmpty() ? View.GONE : View.VISIBLE);
-
-        if (state.getUser() != null) {
-            String name = state.getUser().getName();
-
-            if (name.isEmpty()) {
-                name = state.getUser().getEmail();
-            }
-
-            welcomeText.setText("Здравствуйте, " + name + "!");
-            emailText.setText(state.getUser().getEmail());
+        if (itemId == R.id.nav_dictionary) {
+            fragmentClass = PersonalDictionaryFragment.class;
+        } else if (itemId == R.id.nav_profile) {
+            fragmentClass = ProfileFragment.class;
+        } else {
+            fragmentClass = CatalogFragment.class;
         }
 
-        dictionaryTitle.setText("Мой словарь: " + state.getDictionary().size());
+        manager.popBackStackImmediate(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
 
-        dictionaryAdapter.clear();
-        dictionaryAdapter.addAll(state.getDictionaryRows());
-        dictionaryAdapter.notifyDataSetChanged();
+        manager.beginTransaction().setReorderingAllowed(true)
+                .replace(R.id.fragmentContainer, fragmentClass, null).commit();
+
+        currentRoot = itemId;
+    }
+
+    private void openWordDetails(Bundle arguments) {
+        FragmentManager manager = getSupportFragmentManager();
+
+        if (manager.isStateSaved()) {
+            return;
+        }
+
+        manager.beginTransaction().setReorderingAllowed(true)
+                .replace(R.id.fragmentContainer, WordDetailsFragment.class, arguments)
+                .addToBackStack("word_details").commit();
     }
 
     private void openLogin() {
@@ -166,75 +116,9 @@ public final class MainActivity extends AppCompatActivity {
         finish();
     }
 
-    private void renderDictionaryState(DictionaryState state) {
-        if (state == null) {
-            if (dictionaryDialog != null) {
-                dictionaryDialog.setOnDismissListener(null);
-                dictionaryDialog.dismiss();
-                dictionaryDialog = null;
-            }
-            return;
-        }
-
-        if (dictionaryDialog == null) {
-            dictionaryDialog = new AlertDialog.Builder(this)
-                    .setTitle("Словарь").setMessage("Загрузка…").setPositiveButton("Закрыть", null).create();
-
-            dictionaryDialog.setOnDismissListener(dialog -> {
-                dictionaryDialog = null;
-                model.clearDictionaryState();
-            });
-
-            dictionaryDialog.show();
-        }
-
-        if (state.isLoading()) {
-            dictionaryDialog.setTitle("Словарь");
-            dictionaryDialog.setMessage("Загрузка словарной статьи…");
-            return;
-        }
-
-        if (!state.getError().isEmpty()) {
-            dictionaryDialog.setTitle("Не удалось загрузить статью");
-            dictionaryDialog.setMessage(state.getError());
-            return;
-        }
-
-        WordDetails details = state.getDetails();
-
-        if (details == null) {
-            dictionaryDialog.setMessage("Словарная статья отсутствует");
-            return;
-        }
-
-        StringBuilder text = new StringBuilder();
-
-        if (!details.getPhonetic().isEmpty()) {
-            text.append("Транскрипция: ").append(details.getPhonetic()).append("\n\n");
-        }
-
-        if (!details.getPartOfSpeech().isEmpty()) {
-            text.append("Часть речи: ").append(details.getPartOfSpeech()).append("\n\n");
-        }
-
-        text.append("Определение:\n").append(details.getDefinition());
-
-        if (!details.getExample().isEmpty()) {
-            text.append("\n\nПример:\n").append(details.getExample());
-        }
-
-        dictionaryDialog.setTitle(details.getWord());
-        dictionaryDialog.setMessage(text.toString());
-    }
-
     @Override
-    protected void onDestroy() {
-        if (dictionaryDialog != null) {
-            dictionaryDialog.setOnDismissListener(null);
-            dictionaryDialog.dismiss();
-            dictionaryDialog = null;
-        }
-
-        super.onDestroy();
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        outState.putInt(ROOT_KEY, currentRoot);
+        super.onSaveInstanceState(outState);
     }
 }
