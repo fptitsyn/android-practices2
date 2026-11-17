@@ -33,6 +33,7 @@ import ru.mirea.ptitsyn.domain.usecases.dict.RemoveWordFromDictionaryUseCase;
 import ru.mirea.ptitsyn.domain.models.WordDetails;
 import ru.mirea.ptitsyn.domain.repository.RepositoryException;
 import ru.mirea.ptitsyn.domain.usecases.catalog.GetWordDetailsUseCase;
+import ru.mirea.ptitsyn.domain.usecases.dict.SaveRecognizedWordUseCase;
 
 public final class MainViewModel extends ViewModel {
 
@@ -66,6 +67,9 @@ public final class MainViewModel extends ViewModel {
     private final MutableLiveData<DictionaryState> dictionaryState = new MutableLiveData<>();
     private long dictionaryRequestId;
 
+    private final SaveRecognizedWordUseCase saveRecognizedWord;
+    private final MutableLiveData<String> recognitionSaveMessage = new MutableLiveData<>("");
+
     public MainViewModel(
             AuthRepository authRepository,
             UserRepository userRepository,
@@ -86,6 +90,8 @@ public final class MainViewModel extends ViewModel {
         removeWord = new RemoveWordFromDictionaryUseCase(dictionaryRepository);
 
         getWordDetails = new GetWordDetailsUseCase(wordRepository);
+
+        saveRecognizedWord = new SaveRecognizedWordUseCase(dictionaryRepository);
 
         state.addSource(catalogSource, words -> publishState());
         state.addSource(dictionarySource, words -> publishState());
@@ -337,5 +343,34 @@ public final class MainViewModel extends ViewModel {
     public void clearDictionaryState() {
         dictionaryRequestId++;
         dictionaryState.setValue(null);
+    }
+
+    public LiveData<String> getRecognitionSaveMessage() {
+        return recognitionSaveMessage;
+    }
+
+    public void clearRecognitionSaveMessage() {
+        recognitionSaveMessage.setValue("");
+    }
+
+    public void saveRecognizedWord(String english, String translation) {
+        if (!canChangeDictionary()) {
+            return;
+        }
+
+        String userId = currentUser.getId();
+        recognitionSaveMessage.setValue("");
+
+        submit(
+                () -> {
+                    saveRecognizedWord.execute(userId, english, translation);
+                    return getDictionary.execute(userId);
+                },
+                words -> {
+                    dictionarySource.setValue(words);
+                    recognitionSaveMessage.setValue("Слово добавлено в личный словарь");
+                },
+                "Не удалось сохранить распознанное слово"
+        );
     }
 }

@@ -2,6 +2,7 @@ package ru.mirea.ptitsyn.data.repository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import ru.mirea.ptitsyn.data.database.DictionaryWordDao;
 import ru.mirea.ptitsyn.data.database.DictionaryWordEntity;
@@ -45,5 +46,11 @@ public final class UserDictionaryRepositoryImpl
     @Override
     public void removeWord(String userId, int wordId) {
         dao.delete(userId, wordId);
+    }
+
+    @Override
+    public void saveRecognizedWord(String userId, String english, String translation) {
+        String normalized = english.trim().toLowerCase(Locale.ROOT);
+        dao.saveRecognizedWord(userId, normalized, translation.trim());
     }
 }

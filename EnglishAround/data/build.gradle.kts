@@ -37,6 +37,8 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
+    implementation(libs.tensorflow.lite.task.vision)
+    implementation(libs.exifinterface)
     api(libs.room.runtime)
     annotationProcessor(libs.room.compiler)
     testImplementation(libs.junit)

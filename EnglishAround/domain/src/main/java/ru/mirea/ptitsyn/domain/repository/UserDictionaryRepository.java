@@ -10,4 +10,6 @@ public interface UserDictionaryRepository {
     List<Word> getWords(String userId);
 
     void removeWord(String userId, int wordId);
+
+    void saveRecognizedWord(String userId, String english, String translation);
 }
