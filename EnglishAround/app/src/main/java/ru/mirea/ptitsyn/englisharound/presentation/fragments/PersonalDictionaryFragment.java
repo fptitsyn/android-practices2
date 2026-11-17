@@ -1,10 +1,9 @@
 package ru.mirea.ptitsyn.englisharound.presentation.fragments;
 
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.Button;
-import android.widget.ProgressBar;
-import android.widget.TextView;
+import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -12,21 +11,24 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import ru.mirea.ptitsyn.domain.models.Word;
 import ru.mirea.ptitsyn.englisharound.R;
+import ru.mirea.ptitsyn.englisharound.databinding.FragmentWordListBinding;
 import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModel;
 import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModelFactory;
 import ru.mirea.ptitsyn.englisharound.presentation.main.WordAdapter;
 
 public final class PersonalDictionaryFragment extends Fragment {
 
-    private RecyclerView recyclerView;
+    private FragmentWordListBinding binding;
     private boolean busy = true;
 
-    public PersonalDictionaryFragment() {
-        super(R.layout.fragment_word_list);
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        binding = FragmentWordListBinding.inflate(inflater, container, false);
+        return binding.getRoot();
     }
 
     @Override
@@ -36,15 +38,8 @@ public final class PersonalDictionaryFragment extends Fragment {
         MainViewModel model = new ViewModelProvider(requireActivity(),
                 new MainViewModelFactory(requireContext())).get(MainViewModel.class);
 
-        TextView title = view.findViewById(R.id.listTitle);
-        TextView hint = view.findViewById(R.id.listHint);
-        TextView emptyText = view.findViewById(R.id.emptyText);
-        TextView errorText = view.findViewById(R.id.errorText);
-        Button refreshButton = view.findViewById(R.id.refreshButton);
-        ProgressBar progress = view.findViewById(R.id.progress);
-
-        hint.setText("Нажмите для просмотра слова. Удерживайте для удаления из словаря.");
-        emptyText.setText("Вы пока не добавили слова в личный словарь");
+        binding.listHint.setText("Нажмите для просмотра статьи. Удерживайте для удаления из словаря.");
+        binding.emptyText.setText("Вы пока не добавили слова в личный словарь");
 
         WordAdapter adapter = new WordAdapter(this::openWord, word -> {
             if (!busy) {
@@ -52,26 +47,24 @@ public final class PersonalDictionaryFragment extends Fragment {
             }
         });
 
-        recyclerView = view.findViewById(R.id.wordList);
-        recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
-        recyclerView.setAdapter(adapter);
-
-        refreshButton.setOnClickListener(button -> model.refresh());
+        binding.wordList.setLayoutManager(new LinearLayoutManager(requireContext()));
+        binding.wordList.setAdapter(adapter);
+        binding.refreshButton.setOnClickListener(button -> model.refresh());
 
         model.getState().observe(getViewLifecycleOwner(), state -> {
             busy = state.isLoading();
 
-            title.setText("Мой словарь: " + state.getDictionary().size());
+            binding.listTitle.setText("Мой словарь: " + state.getDictionary().size());
             adapter.setItems(state.getDictionary());
 
-            refreshButton.setEnabled(!busy);
-            progress.setVisibility(busy ? View.VISIBLE : View.GONE);
+            binding.refreshButton.setEnabled(!busy);
+            binding.progress.setVisibility(busy ? View.VISIBLE : View.GONE);
 
-            errorText.setText(state.getError());
-            errorText.setVisibility(state.getError().isEmpty() ? View.GONE : View.VISIBLE);
+            binding.errorText.setText(state.getError());
+            binding.errorText.setVisibility(state.getError().isEmpty() ? View.GONE : View.VISIBLE);
 
             boolean empty = !busy && state.getDictionary().isEmpty();
-            emptyText.setVisibility(empty ? View.VISIBLE : View.GONE);
+            binding.emptyText.setVisibility(empty ? View.VISIBLE : View.GONE);
         });
     }
 
@@ -86,8 +79,8 @@ public final class PersonalDictionaryFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
-        recyclerView.setAdapter(null);
-        recyclerView = null;
+        binding.wordList.setAdapter(null);
         super.onDestroyView();
+        binding = null;
     }
 }

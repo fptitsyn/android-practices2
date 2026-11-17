@@ -1,12 +1,24 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="192dp"
-    android:orientation="vertical" android:gravity="bottom" android:padding="24dp"
-    android:background="@color/nav_toolbar">
-    <ImageView android:layout_width="40dp" android:layout_height="40dp" android:src="@drawable/ic_book"
-        android:tint="#FFFFFF" android:importantForAccessibility="no" />
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="16dp" android:text="@string/app_name" android:textColor="#FFFFFF"
-        android:textSize="22sp" android:textStyle="bold" />
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="4dp" android:text="@string/drawer_subtitle" android:textColor="#FFFFFF" />
+    android:layout_width="match_parent"
+    android:layout_height="192dp"
+    android:background="@color/nav_toolbar"
+    android:gravity="bottom"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/app_name"
+        android:textColor="#FFFFFF"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="@string/drawer_subtitle"
+        android:textColor="#FFFFFF" />
 </LinearLayout>

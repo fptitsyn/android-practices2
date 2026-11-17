@@ -1,11 +1,9 @@
 package ru.mirea.ptitsyn.englisharound.presentation.fragments;
 
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.ProgressBar;
-import android.widget.TextView;
+import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,16 +15,20 @@ import com.squareup.picasso.Picasso;
 
 import ru.mirea.ptitsyn.domain.models.WordDetails;
 import ru.mirea.ptitsyn.englisharound.R;
+import ru.mirea.ptitsyn.englisharound.databinding.FragmentWordDetailsBinding;
 import ru.mirea.ptitsyn.englisharound.presentation.main.DictionaryState;
 import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModel;
 import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModelFactory;
 
 public final class WordDetailsFragment extends Fragment {
 
-    private ImageView image;
+    private FragmentWordDetailsBinding binding;
 
-    public WordDetailsFragment() {
-        super(R.layout.fragment_word_details);
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        binding = FragmentWordDetailsBinding.inflate(inflater, container, false);
+        return binding.getRoot();
     }
 
     @Override
@@ -41,29 +43,23 @@ public final class WordDetailsFragment extends Fragment {
         String translation = arguments.getString("translation", "");
         String imageUrl = arguments.getString("image_url", "");
 
-        ((TextView) view.findViewById(R.id.detailsWord)).setText(english);
-        ((TextView) view.findViewById(R.id.detailsTranslation)).setText(translation);
-
-        image = view.findViewById(R.id.detailsImage);
-        image.setImageResource(R.drawable.word_placeholder);
+        binding.detailsWord.setText(english);
+        binding.detailsTranslation.setText(translation);
+        binding.detailsImage.setImageResource(R.drawable.word_placeholder);
 
         if (imageUrl.startsWith("https://")) {
             int size = Math.round(120 * getResources().getDisplayMetrics().density);
 
             Picasso.get().load(imageUrl).resize(size, size).centerCrop()
-                    .placeholder(R.drawable.word_placeholder).error(R.drawable.word_image_error).into(image);
+                    .placeholder(R.drawable.word_placeholder).error(R.drawable.word_image_error)
+                    .into(binding.detailsImage);
         }
 
-        ProgressBar progress = view.findViewById(R.id.detailsProgress);
-        TextView errorText = view.findViewById(R.id.detailsError);
-        TextView content = view.findViewById(R.id.detailsContent);
-        Button retryButton = view.findViewById(R.id.retryButton);
-
-        view.findViewById(R.id.backButton).setOnClickListener(button -> {
+        binding.backButton.setOnClickListener(button -> {
             NavHostFragment.findNavController(this).navigateUp();
         });
 
-        retryButton.setOnClickListener(button -> model.loadWordDetails(english));
+        binding.retryButton.setOnClickListener(button -> model.loadWordDetails(english));
 
         DictionaryState current = model.getDictionaryState().getValue();
 
@@ -76,26 +72,26 @@ public final class WordDetailsFragment extends Fragment {
                 return;
             }
 
-            progress.setVisibility(state.isLoading() ? View.VISIBLE : View.GONE);
+            binding.detailsProgress.setVisibility(state.isLoading() ? View.VISIBLE : View.GONE);
 
             boolean hasError = !state.getError().isEmpty();
-            errorText.setText(state.getError());
-            errorText.setVisibility(hasError ? View.VISIBLE : View.GONE);
-            retryButton.setVisibility(hasError ? View.VISIBLE : View.GONE);
+            binding.detailsError.setText(state.getError());
+            binding.detailsError.setVisibility(hasError ? View.VISIBLE : View.GONE);
+            binding.retryButton.setVisibility(hasError ? View.VISIBLE : View.GONE);
 
             if (state.isLoading() || hasError) {
-                content.setText("");
+                binding.detailsContent.setText("");
                 return;
             }
 
             WordDetails details = state.getDetails();
 
             if (details == null) {
-                content.setText("Словарная статья отсутствует");
+                binding.detailsContent.setText("Словарная статья отсутствует");
                 return;
             }
 
-            content.setText(formatDetails(details));
+            binding.detailsContent.setText(formatDetails(details));
         });
     }
 
@@ -121,8 +117,8 @@ public final class WordDetailsFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
-        Picasso.get().cancelRequest(image);
-        image = null;
+        Picasso.get().cancelRequest(binding.detailsImage);
         super.onDestroyView();
+        binding = null;
     }
 }

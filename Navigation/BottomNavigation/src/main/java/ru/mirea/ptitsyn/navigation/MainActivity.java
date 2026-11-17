@@ -1,6 +1,7 @@
 package ru.mirea.ptitsyn.navigation;
 
 import android.os.Bundle;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -9,6 +10,7 @@ import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
+
 import ru.mirea.ptitsyn.navigation.databinding.ActivityMainBinding;
 
 public class MainActivity extends AppCompatActivity {

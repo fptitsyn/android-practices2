@@ -1,0 +1,2685 @@
+diff --git a/EnglishAround/app/build.gradle.kts b/EnglishAround/app/build.gradle.kts
+index 9285224..f994f42 100644
+--- a/EnglishAround/app/build.gradle.kts
++++ b/EnglishAround/app/build.gradle.kts
+@@ -43,6 +43,7 @@ android {
+ dependencies {
+     implementation(project(":domain"))
+     implementation(project(":data"))
++    implementation(libs.fragment)
+     implementation(libs.picasso)
+     implementation(libs.recyclerview)
+     implementation(libs.lifecycle.viewmodel)
+diff --git a/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/MainActivity.java b/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/MainActivity.java
+index 3dd039c..ff7279d 100644
+--- a/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/MainActivity.java
++++ b/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/MainActivity.java
+@@ -2,51 +2,28 @@ package ru.mirea.ptitsyn.englisharound.presentation;
+ 
+ import android.content.Intent;
+ import android.os.Bundle;
+-import android.view.View;
+-import android.widget.ArrayAdapter;
+-import android.widget.Button;
+-import android.widget.ListView;
+-import android.widget.ProgressBar;
+-import android.widget.TextView;
+ 
++import androidx.annotation.NonNull;
+ import androidx.appcompat.app.AppCompatActivity;
++import androidx.fragment.app.Fragment;
++import androidx.fragment.app.FragmentManager;
+ import androidx.lifecycle.ViewModelProvider;
+-import androidx.recyclerview.widget.LinearLayoutManager;
+-import androidx.recyclerview.widget.RecyclerView;
+-import androidx.appcompat.app.AlertDialog;
+ 
+-import java.util.ArrayList;
++import com.google.android.material.bottomnavigation.BottomNavigationView;
+ 
+ import ru.mirea.ptitsyn.englisharound.R;
+ import ru.mirea.ptitsyn.englisharound.presentation.auth.AuthUi;
+-import ru.mirea.ptitsyn.englisharound.presentation.main.MainUiState;
++import ru.mirea.ptitsyn.englisharound.presentation.fragments.CatalogFragment;
++import ru.mirea.ptitsyn.englisharound.presentation.fragments.PersonalDictionaryFragment;
++import ru.mirea.ptitsyn.englisharound.presentation.fragments.ProfileFragment;
++import ru.mirea.ptitsyn.englisharound.presentation.fragments.WordDetailsFragment;
+ import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModel;
+ import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModelFactory;
+-import ru.mirea.ptitsyn.englisharound.presentation.main.WordAdapter;
+-import ru.mirea.ptitsyn.englisharound.presentation.main.DictionaryState;
+-
+-import ru.mirea.ptitsyn.domain.models.WordDetails;
+ 
+ public final class MainActivity extends AppCompatActivity {
+ 
+-    private MainViewModel model;
+-    private MainUiState currentState;
+-
+-    private TextView welcomeText;
+-    private TextView emailText;
+-    private TextView errorText;
+-    private TextView dictionaryTitle;
+-
+-    private ProgressBar progress;
+-    private Button refreshButton;
+-    private Button logoutButton;
+-
+-    private RecyclerView catalogList;
+-    private ListView dictionaryList;
+-
+-    private WordAdapter catalogAdapter;
+-    private ArrayAdapter<String> dictionaryAdapter;
+-    private AlertDialog dictionaryDialog;
++    private static final String ROOT_KEY = "current_root";
++    private int currentRoot = R.id.nav_catalog;
+ 
+     @Override
+     protected void onCreate(Bundle savedInstanceState) {
+@@ -55,104 +32,77 @@ public final class MainActivity extends AppCompatActivity {
+ 
+         AuthUi.applyInsets(this, findViewById(R.id.mainRoot));
+ 
+-        bindViews();
+-
+-        model = new ViewModelProvider(this, new MainViewModelFactory(this)).get(MainViewModel.class);
+-
+-        configureLists();
+-        configureActions();
+-
+-        model.getState().observe(this, this::render);
++        MainViewModel model = new ViewModelProvider(this, new MainViewModelFactory(this)).get(MainViewModel.class);
+ 
+-        model.getCatalog().observe(this, catalogAdapter::setItems);
+-
+-        model.getDictionaryState().observe(this, this::renderDictionaryState);
+-    }
+-
+-    private void bindViews() {
+-        welcomeText = findViewById(R.id.welcomeText);
+-        emailText = findViewById(R.id.emailText);
+-        errorText = findViewById(R.id.errorText);
+-        dictionaryTitle = findViewById(R.id.dictionaryTitle);
++        model.getState().observe(this, state -> {
++            if (state.isSignedOut()) {
++                openLogin();
++            }
++        });
+ 
+-        progress = findViewById(R.id.progress);
+-        refreshButton = findViewById(R.id.refreshButton);
+-        logoutButton = findViewById(R.id.logoutButton);
++        getSupportFragmentManager().setFragmentResultListener("open_word", this, (requestKey, bundle) -> {
++            openWordDetails(bundle);
++        });
+ 
+-        catalogList = findViewById(R.id.catalogList);
+-        dictionaryList = findViewById(R.id.dictionaryList);
++        BottomNavigationView navigation = findViewById(R.id.bottomNavigation);
+ 
+-        dictionaryList.setEmptyView(findViewById(R.id.dictionaryEmptyText));
+-    }
+-
+-    private void configureLists() {
+-        catalogAdapter = new WordAdapter(
+-                word -> model.loadWordDetails(word.getEnglish()),
+-                word -> {
+-                    if (currentState != null && !currentState.isLoading()) {
+-                        model.addToDictionary(word);
+-                    }
+-                }
+-        );
+-
+-        catalogList.setLayoutManager(new LinearLayoutManager(this));
+-        catalogList.setAdapter(catalogAdapter);
+-
+-        dictionaryAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new ArrayList<String>());
+-        dictionaryList.setAdapter(dictionaryAdapter);
+-    }
++        if (savedInstanceState == null) {
++            showRoot(R.id.nav_catalog);
++        } else {
++            currentRoot = savedInstanceState.getInt(ROOT_KEY, R.id.nav_catalog);
++        }
+ 
+-    private void configureActions() {
+-        refreshButton.setOnClickListener(view -> model.refresh());
+-        logoutButton.setOnClickListener(view -> model.logout());
++        navigation.getMenu().findItem(currentRoot).setChecked(true);
+ 
+-        dictionaryList.setOnItemLongClickListener((parent, view, position, id) -> {
+-            if (currentState == null || currentState.isLoading()) {
+-                return true;
++        navigation.setOnItemSelectedListener(item -> {
++            if (item.getItemId() != currentRoot) {
++                showRoot(item.getItemId());
+             }
++            return true;
++        });
+ 
+-            if (position < currentState.getDictionary().size()) {
+-                model.removeFromDictionary(currentState.getDictionary().get(position));
++        navigation.setOnItemReselectedListener(item -> {
++            if (getSupportFragmentManager().getBackStackEntryCount() > 0) {
++                showRoot(item.getItemId());
+             }
+-
+-            return true;
+         });
+     }
+ 
+-    private void render(MainUiState state) {
+-        currentState = state;
++    private void showRoot(int itemId) {
++        FragmentManager manager = getSupportFragmentManager();
+ 
+-        if (state.isSignedOut()) {
+-            openLogin();
++        if (manager.isStateSaved()) {
+             return;
+         }
+ 
+-        boolean loading = state.isLoading();
++        Class<? extends Fragment> fragmentClass;
+ 
+-        progress.setVisibility(loading ? View.VISIBLE : View.GONE);
+-        refreshButton.setEnabled(!loading);
+-        logoutButton.setEnabled(!loading);
+-        dictionaryList.setEnabled(!loading);
++        if (itemId == R.id.nav_dictionary) {
++            fragmentClass = PersonalDictionaryFragment.class;
++        } else if (itemId == R.id.nav_profile) {
++            fragmentClass = ProfileFragment.class;
++        } else {
++            fragmentClass = CatalogFragment.class;
++        }
+ 
+-        errorText.setText(state.getError());
+-        errorText.setVisibility(state.getError().isEmpty() ? View.GONE : View.VISIBLE);
++        manager.popBackStackImmediate(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+ 
+-        if (state.getUser() != null) {
+-            String name = state.getUser().getName();
++        manager.beginTransaction().setReorderingAllowed(true)
++                .replace(R.id.fragmentContainer, fragmentClass, null).commit();
+ 
+-            if (name.isEmpty()) {
+-                name = state.getUser().getEmail();
+-            }
++        currentRoot = itemId;
++    }
+ 
+-            welcomeText.setText("Здравствуйте, " + name + "!");
+-            emailText.setText(state.getUser().getEmail());
+-        }
++    private void openWordDetails(Bundle arguments) {
++        FragmentManager manager = getSupportFragmentManager();
+ 
+-        dictionaryTitle.setText("Мой словарь: " + state.getDictionary().size());
++        if (manager.isStateSaved()) {
++            return;
++        }
+ 
+-        dictionaryAdapter.clear();
+-        dictionaryAdapter.addAll(state.getDictionaryRows());
+-        dictionaryAdapter.notifyDataSetChanged();
++        manager.beginTransaction().setReorderingAllowed(true)
++                .replace(R.id.fragmentContainer, WordDetailsFragment.class, arguments)
++                .addToBackStack("word_details").commit();
+     }
+ 
+     private void openLogin() {
+@@ -166,75 +116,9 @@ public final class MainActivity extends AppCompatActivity {
+         finish();
+     }
+ 
+-    private void renderDictionaryState(DictionaryState state) {
+-        if (state == null) {
+-            if (dictionaryDialog != null) {
+-                dictionaryDialog.setOnDismissListener(null);
+-                dictionaryDialog.dismiss();
+-                dictionaryDialog = null;
+-            }
+-            return;
+-        }
+-
+-        if (dictionaryDialog == null) {
+-            dictionaryDialog = new AlertDialog.Builder(this)
+-                    .setTitle("Словарь").setMessage("Загрузка…").setPositiveButton("Закрыть", null).create();
+-
+-            dictionaryDialog.setOnDismissListener(dialog -> {
+-                dictionaryDialog = null;
+-                model.clearDictionaryState();
+-            });
+-
+-            dictionaryDialog.show();
+-        }
+-
+-        if (state.isLoading()) {
+-            dictionaryDialog.setTitle("Словарь");
+-            dictionaryDialog.setMessage("Загрузка словарной статьи…");
+-            return;
+-        }
+-
+-        if (!state.getError().isEmpty()) {
+-            dictionaryDialog.setTitle("Не удалось загрузить статью");
+-            dictionaryDialog.setMessage(state.getError());
+-            return;
+-        }
+-
+-        WordDetails details = state.getDetails();
+-
+-        if (details == null) {
+-            dictionaryDialog.setMessage("Словарная статья отсутствует");
+-            return;
+-        }
+-
+-        StringBuilder text = new StringBuilder();
+-
+-        if (!details.getPhonetic().isEmpty()) {
+-            text.append("Транскрипция: ").append(details.getPhonetic()).append("\n\n");
+-        }
+-
+-        if (!details.getPartOfSpeech().isEmpty()) {
+-            text.append("Часть речи: ").append(details.getPartOfSpeech()).append("\n\n");
+-        }
+-
+-        text.append("Определение:\n").append(details.getDefinition());
+-
+-        if (!details.getExample().isEmpty()) {
+-            text.append("\n\nПример:\n").append(details.getExample());
+-        }
+-
+-        dictionaryDialog.setTitle(details.getWord());
+-        dictionaryDialog.setMessage(text.toString());
+-    }
+-
+     @Override
+-    protected void onDestroy() {
+-        if (dictionaryDialog != null) {
+-            dictionaryDialog.setOnDismissListener(null);
+-            dictionaryDialog.dismiss();
+-            dictionaryDialog = null;
+-        }
+-
+-        super.onDestroy();
++    protected void onSaveInstanceState(@NonNull Bundle outState) {
++        outState.putInt(ROOT_KEY, currentRoot);
++        super.onSaveInstanceState(outState);
+     }
+ }
+\ No newline at end of file
+diff --git a/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/fragments/CatalogFragment.java b/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/fragments/CatalogFragment.java
+new file mode 100644
+index 0000000..2f254bf
+--- /dev/null
++++ b/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/fragments/CatalogFragment.java
+@@ -0,0 +1,89 @@
++package ru.mirea.ptitsyn.englisharound.presentation.fragments;
++
++import android.os.Bundle;
++import android.view.View;
++import android.widget.Button;
++import android.widget.ProgressBar;
++import android.widget.TextView;
++
++import androidx.annotation.NonNull;
++import androidx.annotation.Nullable;
++import androidx.fragment.app.Fragment;
++import androidx.lifecycle.ViewModelProvider;
++import androidx.recyclerview.widget.LinearLayoutManager;
++import androidx.recyclerview.widget.RecyclerView;
++
++import ru.mirea.ptitsyn.domain.models.Word;
++import ru.mirea.ptitsyn.englisharound.R;
++import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModel;
++import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModelFactory;
++import ru.mirea.ptitsyn.englisharound.presentation.main.WordAdapter;
++
++public final class CatalogFragment extends Fragment {
++
++    private RecyclerView recyclerView;
++    private boolean busy = true;
++
++    public CatalogFragment() {
++        super(R.layout.fragment_word_list);
++    }
++
++    @Override
++    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
++        super.onViewCreated(view, savedInstanceState);
++
++        MainViewModel model = new ViewModelProvider(requireActivity(),
++                new MainViewModelFactory(requireContext())).get(MainViewModel.class);
++
++        ((TextView) view.findViewById(R.id.listTitle)).setText("Каталог");
++        ((TextView) view.findViewById(R.id.listHint)).setText(
++                "Нажмите для просмотра статьи. Удерживайте для добавления в словарь.");
++
++        Button refreshButton = view.findViewById(R.id.refreshButton);
++        ProgressBar progress = view.findViewById(R.id.progress);
++        TextView errorText = view.findViewById(R.id.errorText);
++        TextView emptyText = view.findViewById(R.id.emptyText);
++
++        WordAdapter adapter = new WordAdapter(this::openWord, word -> {
++            if (!busy) {
++                model.addToDictionary(word);
++            }
++        });
++
++        recyclerView = view.findViewById(R.id.wordList);
++        recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
++        recyclerView.setAdapter(adapter);
++
++        refreshButton.setOnClickListener(button -> model.refresh());
++
++        model.getState().observe(getViewLifecycleOwner(), state -> {
++            busy = state.isLoading();
++            adapter.setItems(state.getCatalog());
++
++            refreshButton.setEnabled(!busy);
++            progress.setVisibility(busy ? View.VISIBLE : View.GONE);
++
++            errorText.setText(state.getError());
++            errorText.setVisibility(state.getError().isEmpty() ? View.GONE : View.VISIBLE);
++
++            boolean empty = !busy && state.getCatalog().isEmpty();
++            emptyText.setVisibility(empty ? View.VISIBLE : View.GONE);
++        });
++    }
++
++    private void openWord(Word word) {
++        Bundle arguments = new Bundle();
++        arguments.putString("english", word.getEnglish());
++        arguments.putString("translation", word.getTranslation());
++        arguments.putString("image_url", word.getImageUrl());
++
++        getParentFragmentManager().setFragmentResult("open_word", arguments);
++    }
++
++    @Override
++    public void onDestroyView() {
++        recyclerView.setAdapter(null);
++        recyclerView = null;
++        super.onDestroyView();
++    }
++}
+\ No newline at end of file
+diff --git a/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/fragments/PersonalDictionaryFragment.java b/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/fragments/PersonalDictionaryFragment.java
+new file mode 100644
+index 0000000..3845875
+--- /dev/null
++++ b/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/fragments/PersonalDictionaryFragment.java
+@@ -0,0 +1,92 @@
++package ru.mirea.ptitsyn.englisharound.presentation.fragments;
++
++import android.os.Bundle;
++import android.view.View;
++import android.widget.Button;
++import android.widget.ProgressBar;
++import android.widget.TextView;
++
++import androidx.annotation.NonNull;
++import androidx.annotation.Nullable;
++import androidx.fragment.app.Fragment;
++import androidx.lifecycle.ViewModelProvider;
++import androidx.recyclerview.widget.LinearLayoutManager;
++import androidx.recyclerview.widget.RecyclerView;
++
++import ru.mirea.ptitsyn.domain.models.Word;
++import ru.mirea.ptitsyn.englisharound.R;
++import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModel;
++import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModelFactory;
++import ru.mirea.ptitsyn.englisharound.presentation.main.WordAdapter;
++
++public final class PersonalDictionaryFragment extends Fragment {
++
++    private RecyclerView recyclerView;
++    private boolean busy = true;
++
++    public PersonalDictionaryFragment() {
++        super(R.layout.fragment_word_list);
++    }
++
++    @Override
++    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
++        super.onViewCreated(view, savedInstanceState);
++
++        MainViewModel model = new ViewModelProvider(requireActivity(),
++                new MainViewModelFactory(requireContext())).get(MainViewModel.class);
++
++        TextView title = view.findViewById(R.id.listTitle);
++        TextView hint = view.findViewById(R.id.listHint);
++        TextView emptyText = view.findViewById(R.id.emptyText);
++        TextView errorText = view.findViewById(R.id.errorText);
++        Button refreshButton = view.findViewById(R.id.refreshButton);
++        ProgressBar progress = view.findViewById(R.id.progress);
++
++        hint.setText("Нажмите для просмотра слова. Удерживайте для удаления из словаря.");
++        emptyText.setText("Вы пока не добавили слова в личный словарь");
++
++        WordAdapter adapter = new WordAdapter(this::openWord, word -> {
++            if (!busy) {
++                model.removeFromDictionary(word);
++            }
++        });
++
++        recyclerView = view.findViewById(R.id.wordList);
++        recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
++        recyclerView.setAdapter(adapter);
++
++        refreshButton.setOnClickListener(button -> model.refresh());
++
++        model.getState().observe(getViewLifecycleOwner(), state -> {
++            busy = state.isLoading();
++
++            title.setText("Мой словарь: " + state.getDictionary().size());
++            adapter.setItems(state.getDictionary());
++
++            refreshButton.setEnabled(!busy);
++            progress.setVisibility(busy ? View.VISIBLE : View.GONE);
++
++            errorText.setText(state.getError());
++            errorText.setVisibility(state.getError().isEmpty() ? View.GONE : View.VISIBLE);
++
++            boolean empty = !busy && state.getDictionary().isEmpty();
++            emptyText.setVisibility(empty ? View.VISIBLE : View.GONE);
++        });
++    }
++
++    private void openWord(Word word) {
++        Bundle arguments = new Bundle();
++        arguments.putString("english", word.getEnglish());
++        arguments.putString("translation", word.getTranslation());
++        arguments.putString("image_url", word.getImageUrl());
++
++        getParentFragmentManager().setFragmentResult("open_word", arguments);
++    }
++
++    @Override
++    public void onDestroyView() {
++        recyclerView.setAdapter(null);
++        recyclerView = null;
++        super.onDestroyView();
++    }
++}
+\ No newline at end of file
+diff --git a/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/fragments/ProfileFragment.java b/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/fragments/ProfileFragment.java
+new file mode 100644
+index 0000000..33df159
+--- /dev/null
++++ b/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/fragments/ProfileFragment.java
+@@ -0,0 +1,70 @@
++package ru.mirea.ptitsyn.englisharound.presentation.fragments;
++
++import android.os.Bundle;
++import android.view.View;
++import android.widget.Button;
++import android.widget.ProgressBar;
++import android.widget.TextView;
++
++import androidx.annotation.NonNull;
++import androidx.annotation.Nullable;
++import androidx.fragment.app.Fragment;
++import androidx.lifecycle.ViewModelProvider;
++
++import ru.mirea.ptitsyn.domain.models.User;
++import ru.mirea.ptitsyn.englisharound.R;
++import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModel;
++import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModelFactory;
++
++public final class ProfileFragment extends Fragment {
++
++    public ProfileFragment() {
++        super(R.layout.fragment_profile);
++    }
++
++    @Override
++    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
++        super.onViewCreated(view, savedInstanceState);
++
++        MainViewModel model = new ViewModelProvider(requireActivity(),
++                new MainViewModelFactory(requireContext())).get(MainViewModel.class);
++
++        TextView nameText = view.findViewById(R.id.profileName);
++        TextView emailText = view.findViewById(R.id.profileEmail);
++        TextView idText = view.findViewById(R.id.profileId);
++        TextView wordsText = view.findViewById(R.id.profileWords);
++        TextView errorText = view.findViewById(R.id.profileError);
++        ProgressBar progress = view.findViewById(R.id.profileProgress);
++        Button refreshButton = view.findViewById(R.id.profileRefreshButton);
++        Button logoutButton = view.findViewById(R.id.logoutButton);
++
++        refreshButton.setOnClickListener(button -> model.refresh());
++        logoutButton.setOnClickListener(button -> model.logout());
++
++        model.getState().observe(getViewLifecycleOwner(), state -> {
++            boolean loading = state.isLoading();
++
++            progress.setVisibility(loading ? View.VISIBLE : View.GONE);
++            refreshButton.setEnabled(!loading);
++            logoutButton.setEnabled(!loading);
++
++            errorText.setText(state.getError());
++            errorText.setVisibility(state.getError().isEmpty() ? View.GONE : View.VISIBLE);
++
++            User user = state.getUser();
++
++            if (user == null) {
++                nameText.setText(loading ? "Загрузка профиля…" : "Профиль не загружен");
++                emailText.setText("");
++                idText.setText("");
++                wordsText.setText("");
++                return;
++            }
++
++            nameText.setText(user.getName().isEmpty() ? "Пользователь" : user.getName());
++            emailText.setText(user.getEmail());
++            idText.setText("ID пользователя: " + user.getId());
++            wordsText.setText("Слов в личном словаре: " + state.getDictionary().size());
++        });
++    }
++}
+\ No newline at end of file
+diff --git a/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/fragments/WordDetailsFragment.java b/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/fragments/WordDetailsFragment.java
+new file mode 100644
+index 0000000..24d1d36
+--- /dev/null
++++ b/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/fragments/WordDetailsFragment.java
+@@ -0,0 +1,124 @@
++package ru.mirea.ptitsyn.englisharound.presentation.fragments;
++
++import android.os.Bundle;
++import android.view.View;
++import android.widget.Button;
++import android.widget.ImageView;
++import android.widget.ProgressBar;
++import android.widget.TextView;
++
++import androidx.annotation.NonNull;
++import androidx.annotation.Nullable;
++import androidx.fragment.app.Fragment;
++import androidx.lifecycle.ViewModelProvider;
++
++import com.squareup.picasso.Picasso;
++
++import ru.mirea.ptitsyn.domain.models.WordDetails;
++import ru.mirea.ptitsyn.englisharound.R;
++import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModel;
++import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModelFactory;
++
++public final class WordDetailsFragment extends Fragment {
++
++    private ImageView image;
++
++    public WordDetailsFragment() {
++        super(R.layout.fragment_word_details);
++    }
++
++    @Override
++    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
++        super.onViewCreated(view, savedInstanceState);
++
++        MainViewModel model = new ViewModelProvider(requireActivity(),
++                new MainViewModelFactory(requireContext())).get(MainViewModel.class);
++
++        Bundle arguments = requireArguments();
++        String english = arguments.getString("english", "");
++        String translation = arguments.getString("translation", "");
++        String imageUrl = arguments.getString("image_url", "");
++
++        ((TextView) view.findViewById(R.id.detailsWord)).setText(english);
++        ((TextView) view.findViewById(R.id.detailsTranslation)).setText(translation);
++
++        image = view.findViewById(R.id.detailsImage);
++        image.setImageResource(R.drawable.word_placeholder);
++
++        if (imageUrl.startsWith("https://")) {
++            int size = Math.round(120 * getResources().getDisplayMetrics().density);
++
++            Picasso.get().load(imageUrl).resize(size, size).centerCrop()
++                    .placeholder(R.drawable.word_placeholder).error(R.drawable.word_image_error).into(image);
++        }
++
++        ProgressBar progress = view.findViewById(R.id.detailsProgress);
++        TextView errorText = view.findViewById(R.id.detailsError);
++        TextView content = view.findViewById(R.id.detailsContent);
++        Button retryButton = view.findViewById(R.id.retryButton);
++
++        view.findViewById(R.id.backButton).setOnClickListener(button -> {
++            getParentFragmentManager().popBackStack();
++        });
++
++        retryButton.setOnClickListener(button -> model.loadWordDetails(english));
++
++        if (savedInstanceState == null || model.getDictionaryState().getValue() == null) {
++            model.loadWordDetails(english);
++        }
++
++        model.getDictionaryState().observe(getViewLifecycleOwner(), state -> {
++            if (state == null) {
++                return;
++            }
++
++            progress.setVisibility(state.isLoading() ? View.VISIBLE : View.GONE);
++
++            boolean hasError = !state.getError().isEmpty();
++            errorText.setText(state.getError());
++            errorText.setVisibility(hasError ? View.VISIBLE : View.GONE);
++            retryButton.setVisibility(hasError ? View.VISIBLE : View.GONE);
++
++            if (state.isLoading() || hasError) {
++                content.setText("");
++                return;
++            }
++
++            WordDetails details = state.getDetails();
++
++            if (details == null) {
++                content.setText("Словарная статья отсутствует");
++                return;
++            }
++
++            content.setText(formatDetails(details));
++        });
++    }
++
++    private String formatDetails(WordDetails details) {
++        StringBuilder text = new StringBuilder();
++
++        if (!details.getPhonetic().isEmpty()) {
++            text.append("Транскрипция: ").append(details.getPhonetic()).append("\n\n");
++        }
++
++        if (!details.getPartOfSpeech().isEmpty()) {
++            text.append("Часть речи: ").append(details.getPartOfSpeech()).append("\n\n");
++        }
++
++        text.append("Определение:\n").append(details.getDefinition());
++
++        if (!details.getExample().isEmpty()) {
++            text.append("\n\nПример:\n").append(details.getExample());
++        }
++
++        return text.toString();
++    }
++
++    @Override
++    public void onDestroyView() {
++        Picasso.get().cancelRequest(image);
++        image = null;
++        super.onDestroyView();
++    }
++}
+\ No newline at end of file
+diff --git a/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/main/MainViewModel.java b/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/main/MainViewModel.java
+index 9c50f53..465bc95 100644
+--- a/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/main/MainViewModel.java
++++ b/EnglishAround/app/src/main/java/ru/mirea/ptitsyn/englisharound/presentation/main/MainViewModel.java
+@@ -37,13 +37,9 @@ import ru.mirea.ptitsyn.domain.usecases.catalog.GetWordDetailsUseCase;
+ public final class MainViewModel extends ViewModel {
+ 
+     private static final String TAG = "MainViewModel";
+-
+     private final ExecutorService worker = Executors.newSingleThreadExecutor();
+-
+     private final Executor mainExecutor;
+-
+     private final UserRepository userRepository;
+-
+     private final GetCurrentUserUseCase getCurrentUser;
+     private final LogoutUserUseCase logoutUser;
+     private final GetWordCatalogUseCase getCatalog;
+@@ -51,15 +47,12 @@ public final class MainViewModel extends ViewModel {
+     private final AddWordToDictionaryUseCase addWord;
+     private final RemoveWordFromDictionaryUseCase removeWord;
+ 
+-    // Источник № 1: результат получения каталога из NetworkApi.
+     private final MutableLiveData<List<Word>> catalogSource =
+             new MutableLiveData<>(Collections.emptyList());
+ 
+-    // Источник № 2: результат чтения личного словаря из Room.
+     private final MutableLiveData<List<Word>> dictionarySource =
+             new MutableLiveData<>(Collections.emptyList());
+ 
+-    // Общее состояние экрана, зависящее от обоих источников.
+     private final MediatorLiveData<MainUiState> state = new MediatorLiveData<>();
+ 
+     private User currentUser;
+@@ -97,8 +90,6 @@ public final class MainViewModel extends ViewModel {
+         state.addSource(catalogSource, words -> publishState());
+         state.addSource(dictionarySource, words -> publishState());
+ 
+-        Log.d(TAG, "MainViewModel created");
+-
+         refresh();
+     }
+ 
+@@ -124,7 +115,6 @@ public final class MainViewModel extends ViewModel {
+                         );
+                     }
+ 
+-                    // SharedPreferences: сохраняем и читаем профиль.
+                     userRepository.saveUser(authenticatedUser);
+                     User localUser = userRepository.getUser();
+ 
+@@ -134,10 +124,8 @@ public final class MainViewModel extends ViewModel {
+                         );
+                     }
+ 
+-                    // Сетевая заглушка.
+                     List<Word> catalog = getCatalog.execute();
+ 
+-                    // Room.
+                     List<Word> dictionary = getDictionary.execute(
+                             localUser.getId()
+                     );
+@@ -271,12 +259,8 @@ public final class MainViewModel extends ViewModel {
+ 
+         state.setValue(new MainUiState(
+                         currentUser,
+-                        catalog == null
+-                                ? Collections.emptyList()
+-                                : catalog,
+-                        dictionary == null
+-                                ? Collections.emptyList()
+-                                : dictionary,
++                        catalog == null ? Collections.emptyList() : catalog,
++                        dictionary == null ? Collections.emptyList() : dictionary,
+                         loading,
+                         signedOut,
+                         error
+@@ -288,9 +272,6 @@ public final class MainViewModel extends ViewModel {
+     protected void onCleared() {
+         cleared = true;
+         worker.shutdown();
+-
+-        Log.d(TAG, "MainViewModel cleared");
+-
+         super.onCleared();
+     }
+ 
+diff --git a/EnglishAround/app/src/main/res/layout/activity_main.xml b/EnglishAround/app/src/main/res/layout/activity_main.xml
+index f06fc13..5d24520 100644
+--- a/EnglishAround/app/src/main/res/layout/activity_main.xml
++++ b/EnglishAround/app/src/main/res/layout/activity_main.xml
+@@ -1,122 +1,21 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<LinearLayout
+-    xmlns:android="http://schemas.android.com/apk/res/android"
++<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
++    xmlns:app="http://schemas.android.com/apk/res-auto"
+     android:id="@+id/mainRoot"
+     android:layout_width="match_parent"
+     android:layout_height="match_parent"
+-    android:orientation="vertical"
+-    android:padding="16dp"
+-    android:background="?android:attr/colorBackground">
++    android:orientation="vertical">
+ 
+-    <TextView
+-        android:layout_width="match_parent"
+-        android:layout_height="wrap_content"
+-        android:text="English Around"
+-        android:textSize="24sp"
+-        android:textStyle="bold" />
+-
+-    <TextView
+-        android:id="@+id/welcomeText"
+-        android:layout_width="match_parent"
+-        android:layout_height="wrap_content"
+-        android:layout_marginTop="12dp"
+-        android:text="Загрузка профиля…"
+-        android:textSize="18sp" />
+-
+-    <TextView
+-        android:id="@+id/emailText"
+-        android:layout_width="match_parent"
+-        android:layout_height="wrap_content"
+-        android:layout_marginTop="4dp"
+-        android:textSize="14sp" />
+-
+-    <ProgressBar
+-        android:id="@+id/progress"
+-        style="?android:attr/progressBarStyleHorizontal"
+-        android:layout_width="match_parent"
+-        android:layout_height="4dp"
+-        android:layout_marginTop="8dp"
+-        android:indeterminate="true"
+-        android:visibility="gone" />
+-
+-    <TextView
+-        android:id="@+id/errorText"
+-        android:layout_width="match_parent"
+-        android:layout_height="wrap_content"
+-        android:layout_marginTop="8dp"
+-        android:textColor="#B3261E"
+-        android:textSize="14sp"
+-        android:visibility="gone" />
+-
+-    <Button
+-        android:id="@+id/refreshButton"
+-        android:layout_width="match_parent"
+-        android:layout_height="wrap_content"
+-        android:layout_marginTop="8dp"
+-        android:text="Обновить данные" />
+-
+-    <TextView
+-        android:layout_width="match_parent"
+-        android:layout_height="wrap_content"
+-        android:layout_marginTop="12dp"
+-        android:text="Каталог слов"
+-        android:textSize="18sp"
+-        android:textStyle="bold" />
+-
+-    <TextView
+-        android:layout_width="match_parent"
+-        android:layout_height="wrap_content"
+-        android:text="Нажмите для просмотра статьи. Удерживайте для добавления в словарь."
+-        android:textSize="13sp" />
+-
+-    <androidx.recyclerview.widget.RecyclerView
+-        android:id="@+id/catalogList"
+-        android:layout_width="match_parent" android:layout_height="0dp"
+-        android:layout_weight="1" android:layout_marginTop="4dp"
+-        android:clipToPadding="false" />
+-
+-    <TextView
+-        android:id="@+id/dictionaryTitle"
+-        android:layout_width="match_parent"
+-        android:layout_height="wrap_content"
+-        android:layout_marginTop="12dp"
+-        android:text="Мой словарь: 0"
+-        android:textSize="18sp"
+-        android:textStyle="bold" />
+-
+-    <TextView
+-        android:layout_width="match_parent"
+-        android:layout_height="wrap_content"
+-        android:text="Удерживайте слово, чтобы удалить его"
+-        android:textSize="13sp" />
+-
+-    <FrameLayout
++    <androidx.fragment.app.FragmentContainerView
++        android:id="@+id/fragmentContainer"
+         android:layout_width="match_parent"
+         android:layout_height="0dp"
+-        android:layout_weight="1"
+-        android:layout_marginTop="4dp">
+-
+-        <ListView
+-            android:id="@+id/dictionaryList"
+-            android:layout_width="match_parent"
+-            android:layout_height="match_parent" />
+-
+-        <TextView
+-            android:id="@+id/dictionaryEmptyText"
+-            android:layout_width="match_parent"
+-            android:layout_height="match_parent"
+-            android:gravity="center"
+-            android:text="В словаре пока нет слов"
+-            android:textSize="15sp"
+-            android:visibility="gone" />
+-
+-    </FrameLayout>
++        android:layout_weight="1" />
+ 
+-    <Button
+-        android:id="@+id/logoutButton"
++    <com.google.android.material.bottomnavigation.BottomNavigationView
++        android:id="@+id/bottomNavigation"
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+-        android:layout_marginTop="8dp"
+-        android:text="Выйти" />
++        app:menu="@menu/menu_navigation" />
+ 
+ </LinearLayout>
+\ No newline at end of file
+diff --git a/EnglishAround/app/src/main/res/layout/fragment_profile.xml b/EnglishAround/app/src/main/res/layout/fragment_profile.xml
+new file mode 100644
+index 0000000..213b15c
+--- /dev/null
++++ b/EnglishAround/app/src/main/res/layout/fragment_profile.xml
+@@ -0,0 +1,80 @@
++<?xml version="1.0" encoding="utf-8"?>
++<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
++    android:layout_width="match_parent"
++    android:layout_height="match_parent"
++    android:fillViewport="true">
++
++    <LinearLayout
++        android:layout_width="match_parent"
++        android:layout_height="wrap_content"
++        android:orientation="vertical"
++        android:padding="24dp">
++
++        <TextView
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:text="Профиль"
++            android:textSize="24sp"
++            android:textStyle="bold" />
++
++        <ProgressBar
++            android:id="@+id/profileProgress"
++            style="?android:attr/progressBarStyleHorizontal"
++            android:layout_width="match_parent"
++            android:layout_height="4dp"
++            android:layout_marginTop="16dp"
++            android:indeterminate="true"
++            android:visibility="gone" />
++
++        <TextView
++            android:id="@+id/profileName"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_marginTop="24dp"
++            android:textSize="22sp" android:textStyle="bold" />
++
++        <TextView
++            android:id="@+id/profileEmail"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_marginTop="8dp"
++            android:textSize="17sp" />
++
++        <TextView
++            android:id="@+id/profileId"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_marginTop="16dp"
++            android:textSize="13sp" />
++
++        <TextView
++            android:id="@+id/profileWords"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_marginTop="24dp"
++            android:textSize="18sp" />
++
++        <TextView
++            android:id="@+id/profileError"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_marginTop="16dp"
++            android:textColor="#B3261E"
++            android:visibility="gone" />
++
++        <Button
++            android:id="@+id/profileRefreshButton"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_marginTop="24dp"
++            android:text="Обновить профиль" />
++
++        <Button
++            android:id="@+id/logoutButton"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_marginTop="8dp"
++            android:text="Выйти из аккаунта" />
++
++    </LinearLayout>
++</ScrollView>
+\ No newline at end of file
+diff --git a/EnglishAround/app/src/main/res/layout/fragment_word_details.xml b/EnglishAround/app/src/main/res/layout/fragment_word_details.xml
+new file mode 100644
+index 0000000..5735e3b
+--- /dev/null
++++ b/EnglishAround/app/src/main/res/layout/fragment_word_details.xml
+@@ -0,0 +1,75 @@
++<?xml version="1.0" encoding="utf-8"?>
++<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
++    android:layout_width="match_parent"
++    android:layout_height="match_parent"
++    android:fillViewport="true">
++
++    <LinearLayout
++        android:layout_width="match_parent"
++        android:layout_height="wrap_content"
++        android:orientation="vertical"
++        android:padding="16dp">
++
++        <Button
++            android:id="@+id/backButton"
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:text="Назад" />
++
++        <ImageView
++            android:id="@+id/detailsImage"
++            android:layout_width="120dp"
++            android:layout_height="120dp"
++            android:layout_marginTop="12dp"
++            android:scaleType="centerCrop"
++            android:importantForAccessibility="no" />
++
++        <TextView
++            android:id="@+id/detailsWord"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_marginTop="16dp"
++            android:textSize="26sp"
++            android:textStyle="bold" />
++
++        <TextView
++            android:id="@+id/detailsTranslation"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_marginTop="4dp"
++            android:textSize="19sp" />
++
++        <ProgressBar
++            android:id="@+id/detailsProgress"
++            style="?android:attr/progressBarStyleHorizontal"
++            android:layout_width="match_parent"
++            android:layout_height="4dp"
++            android:layout_marginTop="16dp"
++            android:indeterminate="true" />
++
++        <TextView
++            android:id="@+id/detailsError"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_marginTop="16dp"
++            android:textColor="#B3261E"
++            android:visibility="gone" />
++
++        <TextView
++            android:id="@+id/detailsContent"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_marginTop="16dp"
++            android:textSize="17sp"
++            android:textIsSelectable="true" />
++
++        <Button
++            android:id="@+id/retryButton"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_marginTop="16dp"
++            android:text="Повторить запрос"
++            android:visibility="gone" />
++
++    </LinearLayout>
++</ScrollView>
+\ No newline at end of file
+diff --git a/EnglishAround/app/src/main/res/layout/fragment_word_list.xml b/EnglishAround/app/src/main/res/layout/fragment_word_list.xml
+new file mode 100644
+index 0000000..f0f139a
+--- /dev/null
++++ b/EnglishAround/app/src/main/res/layout/fragment_word_list.xml
+@@ -0,0 +1,44 @@
++<?xml version="1.0" encoding="utf-8"?>
++<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
++    android:layout_width="match_parent" android:layout_height="match_parent"
++    android:orientation="vertical" android:padding="16dp">
++
++    <TextView
++        android:id="@+id/listTitle"
++        android:layout_width="match_parent" android:layout_height="wrap_content"
++        android:textSize="24sp" android:textStyle="bold" />
++
++    <TextView
++        android:id="@+id/listHint"
++        android:layout_width="match_parent" android:layout_height="wrap_content"
++        android:layout_marginTop="8dp" android:textSize="14sp" />
++
++    <Button
++        android:id="@+id/refreshButton"
++        android:layout_width="match_parent" android:layout_height="wrap_content"
++        android:layout_marginTop="8dp" android:text="Обновить" />
++
++    <ProgressBar
++        android:id="@+id/progress"
++        style="?android:attr/progressBarStyleHorizontal"
++        android:layout_width="match_parent" android:layout_height="4dp"
++        android:indeterminate="true" android:visibility="gone" />
++
++    <TextView
++        android:id="@+id/errorText"
++        android:layout_width="match_parent" android:layout_height="wrap_content"
++        android:layout_marginTop="8dp" android:textColor="#B3261E"
++        android:visibility="gone" />
++
++    <TextView
++        android:id="@+id/emptyText"
++        android:layout_width="match_parent" android:layout_height="wrap_content"
++        android:layout_marginTop="16dp" android:text="Список пуст"
++        android:visibility="gone" />
++
++    <androidx.recyclerview.widget.RecyclerView
++        android:id="@+id/wordList"
++        android:layout_width="match_parent" android:layout_height="0dp"
++        android:layout_weight="1" android:layout_marginTop="8dp" />
++
++</LinearLayout>
+\ No newline at end of file
+diff --git a/EnglishAround/app/src/main/res/menu/menu_navigation.xml b/EnglishAround/app/src/main/res/menu/menu_navigation.xml
+new file mode 100644
+index 0000000..1c69ea8
+--- /dev/null
++++ b/EnglishAround/app/src/main/res/menu/menu_navigation.xml
+@@ -0,0 +1,19 @@
++<?xml version="1.0" encoding="utf-8"?>
++<menu xmlns:android="http://schemas.android.com/apk/res/android">
++
++    <item
++        android:id="@+id/nav_catalog"
++        android:icon="@android:drawable/ic_menu_search"
++        android:title="Каталог" />
++
++    <item
++        android:id="@+id/nav_dictionary"
++        android:icon="@android:drawable/ic_menu_edit"
++        android:title="Мой словарь" />
++
++    <item
++        android:id="@+id/nav_profile"
++        android:icon="@android:drawable/ic_menu_myplaces"
++        android:title="Профиль" />
++
++</menu>
+\ No newline at end of file
+diff --git a/EnglishAround/data/src/main/java/ru/mirea/ptitsyn/data/network/ApiClient.java b/EnglishAround/data/src/main/java/ru/mirea/ptitsyn/data/network/ApiClient.java
+index d1047a8..c9d414f 100644
+--- a/EnglishAround/data/src/main/java/ru/mirea/ptitsyn/data/network/ApiClient.java
++++ b/EnglishAround/data/src/main/java/ru/mirea/ptitsyn/data/network/ApiClient.java
+@@ -1,5 +1,8 @@
+ package ru.mirea.ptitsyn.data.network;
+ 
++import java.util.concurrent.TimeUnit;
++
++import okhttp3.OkHttpClient;
+ import retrofit2.Retrofit;
+ import retrofit2.converter.gson.GsonConverterFactory;
+ 
+@@ -10,7 +13,14 @@ public final class ApiClient {
+     }
+ 
+     public static DictionaryApiService createDictionaryService() {
++        final OkHttpClient okHttpClient = new OkHttpClient.Builder()
++                .connectTimeout(20, TimeUnit.SECONDS)
++                .writeTimeout(20, TimeUnit.SECONDS)
++                .readTimeout(30, TimeUnit.SECONDS)
++                .build();
++
+         Retrofit retrofit = new Retrofit.Builder().baseUrl(BASE_URL)
++                .client(okHttpClient)
+                 .addConverterFactory(GsonConverterFactory.create()).build();
+ 
+         return retrofit.create(DictionaryApiService.class);
+diff --git a/EnglishAround/gradle/libs.versions.toml b/EnglishAround/gradle/libs.versions.toml
+index 9730325..f86b48d 100644
+--- a/EnglishAround/gradle/libs.versions.toml
++++ b/EnglishAround/gradle/libs.versions.toml
+@@ -1,5 +1,6 @@
+ [versions]
+ agp = "9.1.1"
++fragment = "1.8.5"
+ junit = "4.13.2"
+ junitVersion = "1.3.0"
+ espressoCore = "3.7.0"
+@@ -19,6 +20,7 @@ roomRuntime = "2.8.4"
+ 
+ [libraries]
+ converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
++fragment = { module = "androidx.fragment:fragment", version.ref = "fragment" }
+ junit = { group = "junit", name = "junit", version.ref = "junit" }
+ ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+ espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+diff --git a/Lesson5/.gitignore b/Lesson56/.gitignore
+similarity index 100%
+rename from Lesson5/.gitignore
+rename to Lesson56/.gitignore
+diff --git a/Lesson56/FragmentManagerApp/.gitignore b/Lesson56/FragmentManagerApp/.gitignore
+new file mode 100644
+index 0000000..796b96d
+--- /dev/null
++++ b/Lesson56/FragmentManagerApp/.gitignore
+@@ -0,0 +1 @@
++/build
+diff --git a/Lesson56/FragmentManagerApp/build.gradle.kts b/Lesson56/FragmentManagerApp/build.gradle.kts
+new file mode 100644
+index 0000000..7640430
+--- /dev/null
++++ b/Lesson56/FragmentManagerApp/build.gradle.kts
+@@ -0,0 +1,29 @@
++plugins {
++    alias(libs.plugins.android.application)
++}
++
++android {
++    namespace = "ru.mirea.ptitsyn.fragmentmanagerapp"
++    compileSdk {
++        version = release(36) { minorApiLevel = 1 }
++    }
++    defaultConfig {
++        applicationId = "ru.mirea.ptitsyn.fragmentmanagerapp"
++        minSdk = 27
++        targetSdk = 36
++        versionCode = 1
++        versionName = "1.0"
++    }
++    compileOptions {
++        sourceCompatibility = JavaVersion.VERSION_11
++        targetCompatibility = JavaVersion.VERSION_11
++    }
++}
++
++dependencies {
++    implementation(libs.appcompat)
++    implementation(libs.material)
++    implementation("androidx.fragment:fragment:1.8.5")
++    implementation("androidx.lifecycle:lifecycle-viewmodel:2.9.4")
++    implementation("androidx.lifecycle:lifecycle-livedata:2.9.4")
++}
+diff --git a/Lesson56/FragmentManagerApp/src/main/AndroidManifest.xml b/Lesson56/FragmentManagerApp/src/main/AndroidManifest.xml
+new file mode 100644
+index 0000000..e0081a0
+--- /dev/null
++++ b/Lesson56/FragmentManagerApp/src/main/AndroidManifest.xml
+@@ -0,0 +1,12 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android">
++    <application android:allowBackup="true" android:label="@string/app_name"
++        android:supportsRtl="true" android:theme="@style/Theme.Practice6">
++        <activity android:name=".MainActivity" android:exported="true">
++            <intent-filter>
++                <action android:name="android.intent.action.MAIN" />
++                <category android:name="android.intent.category.LAUNCHER" />
++            </intent-filter>
++        </activity>
++    </application>
++</manifest>
+diff --git a/Lesson56/FragmentManagerApp/src/main/java/ru/mirea/ptitsyn/fragmentmanagerapp/Country.java b/Lesson56/FragmentManagerApp/src/main/java/ru/mirea/ptitsyn/fragmentmanagerapp/Country.java
+new file mode 100644
+index 0000000..fba3ef0
+--- /dev/null
++++ b/Lesson56/FragmentManagerApp/src/main/java/ru/mirea/ptitsyn/fragmentmanagerapp/Country.java
+@@ -0,0 +1,17 @@
++package ru.mirea.ptitsyn.fragmentmanagerapp;
++
++public final class Country {
++    private final String name;
++    private final String capital;
++    private final String description;
++
++    public Country(String name, String capital, String description) {
++        this.name = name;
++        this.capital = capital;
++        this.description = description;
++    }
++
++    public String getName() { return name; }
++    public String getCapital() { return capital; }
++    public String getDescription() { return description; }
++}
+diff --git a/Lesson56/FragmentManagerApp/src/main/java/ru/mirea/ptitsyn/fragmentmanagerapp/DetailsFragment.java b/Lesson56/FragmentManagerApp/src/main/java/ru/mirea/ptitsyn/fragmentmanagerapp/DetailsFragment.java
+new file mode 100644
+index 0000000..21a53c1
+--- /dev/null
++++ b/Lesson56/FragmentManagerApp/src/main/java/ru/mirea/ptitsyn/fragmentmanagerapp/DetailsFragment.java
+@@ -0,0 +1,35 @@
++package ru.mirea.ptitsyn.fragmentmanagerapp;
++
++import android.os.Bundle;
++import android.view.LayoutInflater;
++import android.view.View;
++import android.view.ViewGroup;
++import androidx.annotation.NonNull;
++import androidx.annotation.Nullable;
++import androidx.fragment.app.Fragment;
++
++import android.widget.TextView;
++import androidx.lifecycle.ViewModelProvider;
++
++public class DetailsFragment extends Fragment {
++    @Nullable
++    @Override
++    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
++        return inflater.inflate(R.layout.fragment_details, container, false);
++    }
++
++    @Override
++    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
++        super.onViewCreated(view, savedInstanceState);
++        ShareViewModel model = new ViewModelProvider(requireActivity()).get(ShareViewModel.class);
++        TextView name = view.findViewById(R.id.countryName);
++        TextView capital = view.findViewById(R.id.countryCapital);
++        TextView description = view.findViewById(R.id.countryDescription);
++        model.getSelectedItem().observe(getViewLifecycleOwner(), country -> {
++            if (country == null) return;
++            name.setText(country.getName());
++            capital.setText(getString(R.string.capital, country.getCapital()));
++            description.setText(country.getDescription());
++        });
++    }
++}
+diff --git a/Lesson56/FragmentManagerApp/src/main/java/ru/mirea/ptitsyn/fragmentmanagerapp/HeaderFragment.java b/Lesson56/FragmentManagerApp/src/main/java/ru/mirea/ptitsyn/fragmentmanagerapp/HeaderFragment.java
+new file mode 100644
+index 0000000..7fdc443
+--- /dev/null
++++ b/Lesson56/FragmentManagerApp/src/main/java/ru/mirea/ptitsyn/fragmentmanagerapp/HeaderFragment.java
+@@ -0,0 +1,44 @@
++package ru.mirea.ptitsyn.fragmentmanagerapp;
++
++import android.os.Bundle;
++import android.view.LayoutInflater;
++import android.view.View;
++import android.view.ViewGroup;
++import androidx.annotation.NonNull;
++import androidx.annotation.Nullable;
++import androidx.fragment.app.Fragment;
++
++import android.widget.ArrayAdapter;
++import android.widget.ListView;
++import androidx.lifecycle.ViewModelProvider;
++import java.util.ArrayList;
++import java.util.List;
++
++public class HeaderFragment extends Fragment {
++    @Nullable
++    @Override
++    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
++        return inflater.inflate(R.layout.fragment_header, container, false);
++    }
++
++    @Override
++    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
++        super.onViewCreated(view, savedInstanceState);
++        ShareViewModel model = new ViewModelProvider(requireActivity()).get(ShareViewModel.class);
++        List<String> names = new ArrayList<>();
++
++        for (Country country : model.getCountries()) {
++            names.add(country.getName());
++        }
++
++        ListView list = view.findViewById(R.id.countryList);
++        list.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_single_choice, names));
++        list.setOnItemClickListener((parent, item, position, id) -> {
++            model.selectItem(model.getCountries().get(position));
++        });
++
++        model.getSelectedItem().observe(getViewLifecycleOwner(), country -> {
++            if (country != null) list.setItemChecked(model.getCountries().indexOf(country), true);
++        });
++    }
++}
+diff --git a/Lesson56/FragmentManagerApp/src/main/java/ru/mirea/ptitsyn/fragmentmanagerapp/MainActivity.java b/Lesson56/FragmentManagerApp/src/main/java/ru/mirea/ptitsyn/fragmentmanagerapp/MainActivity.java
+new file mode 100644
+index 0000000..8c51b2c
+--- /dev/null
++++ b/Lesson56/FragmentManagerApp/src/main/java/ru/mirea/ptitsyn/fragmentmanagerapp/MainActivity.java
+@@ -0,0 +1,27 @@
++package ru.mirea.ptitsyn.fragmentmanagerapp;
++
++import android.os.Bundle;
++import androidx.appcompat.app.AppCompatActivity;
++import androidx.core.graphics.Insets;
++import androidx.core.view.ViewCompat;
++import androidx.core.view.WindowInsetsCompat;
++
++public class MainActivity extends AppCompatActivity {
++    @Override
++    protected void onCreate(Bundle savedInstanceState) {
++        super.onCreate(savedInstanceState);
++        setContentView(R.layout.activity_main);
++
++        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (view, insets) -> {
++            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.ime());
++            view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
++            return insets;
++        });
++
++        if (savedInstanceState == null) {
++            getSupportFragmentManager().beginTransaction().setReorderingAllowed(true)
++                    .add(R.id.headerContainerView, HeaderFragment.class, null)
++                    .add(R.id.detailsContainerView, DetailsFragment.class, null).commit();
++        }
++    }
++}
+diff --git a/Lesson56/FragmentManagerApp/src/main/java/ru/mirea/ptitsyn/fragmentmanagerapp/ShareViewModel.java b/Lesson56/FragmentManagerApp/src/main/java/ru/mirea/ptitsyn/fragmentmanagerapp/ShareViewModel.java
+new file mode 100644
+index 0000000..104452e
+--- /dev/null
++++ b/Lesson56/FragmentManagerApp/src/main/java/ru/mirea/ptitsyn/fragmentmanagerapp/ShareViewModel.java
+@@ -0,0 +1,23 @@
++package ru.mirea.ptitsyn.fragmentmanagerapp;
++
++import androidx.lifecycle.LiveData;
++import androidx.lifecycle.MutableLiveData;
++import androidx.lifecycle.ViewModel;
++import java.util.Arrays;
++import java.util.Collections;
++import java.util.List;
++
++public class ShareViewModel extends ViewModel {
++    private final MutableLiveData<Country> selectedItem = new MutableLiveData<>();
++    private final List<Country> countries = List.of(
++            new Country("Россия", "Москва", "Государство, расположенное в Европе и Азии."),
++            new Country("Бразилия", "Бразилиа", "Крупнейшее по площади государство Южной Америки."),
++            new Country("Китай", "Пекин", "Государство в Восточной Азии."),
++            new Country("Индия", "Нью-Дели", "Государство в Южной Азии."),
++            new Country("ЮАР", "Претория, Кейптаун, Блумфонтейн", "Государство на юге Африки с тремя столицами.")
++    );
++
++    public List<Country> getCountries() { return countries; }
++    public LiveData<Country> getSelectedItem() { return selectedItem; }
++    public void selectItem(Country country) { selectedItem.setValue(country); }
++}
+diff --git a/Lesson56/FragmentManagerApp/src/main/res/layout/activity_main.xml b/Lesson56/FragmentManagerApp/src/main/res/layout/activity_main.xml
+new file mode 100644
+index 0000000..f3fb002
+--- /dev/null
++++ b/Lesson56/FragmentManagerApp/src/main/res/layout/activity_main.xml
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="utf-8"?>
++<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
++    android:id="@+id/main" android:layout_width="match_parent" android:layout_height="match_parent"
++    android:orientation="vertical">
++    <androidx.fragment.app.FragmentContainerView android:id="@+id/headerContainerView"
++        android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
++    <androidx.fragment.app.FragmentContainerView android:id="@+id/detailsContainerView"
++        android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
++</LinearLayout>
+diff --git a/Lesson56/FragmentManagerApp/src/main/res/layout/fragment_details.xml b/Lesson56/FragmentManagerApp/src/main/res/layout/fragment_details.xml
+new file mode 100644
+index 0000000..471c46a
+--- /dev/null
++++ b/Lesson56/FragmentManagerApp/src/main/res/layout/fragment_details.xml
+@@ -0,0 +1,14 @@
++<?xml version="1.0" encoding="utf-8"?>
++<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
++    android:layout_width="match_parent" android:layout_height="match_parent">
++    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
++        android:orientation="vertical" android:padding="16dp">
++        <TextView android:id="@+id/countryName" android:layout_width="match_parent"
++            android:layout_height="wrap_content" android:text="@string/details_hint"
++            android:textSize="22sp" android:textStyle="bold" />
++        <TextView android:id="@+id/countryCapital" android:layout_width="match_parent"
++            android:layout_height="wrap_content" android:layout_marginTop="12dp" android:textSize="17sp" />
++        <TextView android:id="@+id/countryDescription" android:layout_width="match_parent"
++            android:layout_height="wrap_content" android:layout_marginTop="12dp" android:textSize="16sp" />
++    </LinearLayout>
++</ScrollView>
+diff --git a/Lesson56/FragmentManagerApp/src/main/res/layout/fragment_header.xml b/Lesson56/FragmentManagerApp/src/main/res/layout/fragment_header.xml
+new file mode 100644
+index 0000000..23cea8d
+--- /dev/null
++++ b/Lesson56/FragmentManagerApp/src/main/res/layout/fragment_header.xml
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="utf-8"?>
++<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
++    android:layout_width="match_parent" android:layout_height="match_parent"
++    android:orientation="vertical" android:padding="16dp">
++    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
++        android:text="@string/list_title" android:textSize="22sp" android:textStyle="bold" />
++    <ListView android:id="@+id/countryList" android:layout_width="match_parent"
++        android:layout_height="0dp" android:layout_weight="1" android:choiceMode="singleChoice" />
++</LinearLayout>
+diff --git a/Lesson56/FragmentManagerApp/src/main/res/values/strings.xml b/Lesson56/FragmentManagerApp/src/main/res/values/strings.xml
+new file mode 100644
+index 0000000..3672b79
+--- /dev/null
++++ b/Lesson56/FragmentManagerApp/src/main/res/values/strings.xml
+@@ -0,0 +1,6 @@
++<resources>
++    <string name="app_name">FragmentManagerApp</string>
++    <string name="list_title">Выберите страну</string>
++    <string name="details_hint">Подробности появятся после выбора страны</string>
++    <string name="capital">Столица: %1$s</string>
++</resources>
+diff --git a/Lesson56/FragmentManagerApp/src/main/res/values/themes.xml b/Lesson56/FragmentManagerApp/src/main/res/values/themes.xml
+new file mode 100644
+index 0000000..c3b4a06
+--- /dev/null
++++ b/Lesson56/FragmentManagerApp/src/main/res/values/themes.xml
+@@ -0,0 +1,3 @@
++<resources>
++    <style name="Theme.Practice6" parent="Theme.Material3.DayNight.NoActionBar" />
++</resources>
+diff --git a/Lesson56/ResultApiFragmentApp/.gitignore b/Lesson56/ResultApiFragmentApp/.gitignore
+new file mode 100644
+index 0000000..796b96d
+--- /dev/null
++++ b/Lesson56/ResultApiFragmentApp/.gitignore
+@@ -0,0 +1 @@
++/build
+diff --git a/Lesson56/ResultApiFragmentApp/build.gradle.kts b/Lesson56/ResultApiFragmentApp/build.gradle.kts
+new file mode 100644
+index 0000000..ddf4db4
+--- /dev/null
++++ b/Lesson56/ResultApiFragmentApp/build.gradle.kts
+@@ -0,0 +1,29 @@
++plugins {
++    alias(libs.plugins.android.application)
++}
++
++android {
++    namespace = "ru.mirea.ptitsyn.resultapifragmentapp"
++    compileSdk {
++        version = release(36) { minorApiLevel = 1 }
++    }
++    defaultConfig {
++        applicationId = "ru.mirea.ptitsyn.resultapifragmentapp"
++        minSdk = 27
++        targetSdk = 36
++        versionCode = 1
++        versionName = "1.0"
++    }
++    compileOptions {
++        sourceCompatibility = JavaVersion.VERSION_11
++        targetCompatibility = JavaVersion.VERSION_11
++    }
++}
++
++dependencies {
++    implementation(libs.appcompat)
++    implementation(libs.material)
++    implementation("androidx.fragment:fragment:1.8.5")
++    implementation("androidx.lifecycle:lifecycle-viewmodel:2.9.4")
++    implementation("androidx.lifecycle:lifecycle-livedata:2.9.4")
++}
+diff --git a/Lesson56/ResultApiFragmentApp/src/main/AndroidManifest.xml b/Lesson56/ResultApiFragmentApp/src/main/AndroidManifest.xml
+new file mode 100644
+index 0000000..e0081a0
+--- /dev/null
++++ b/Lesson56/ResultApiFragmentApp/src/main/AndroidManifest.xml
+@@ -0,0 +1,12 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android">
++    <application android:allowBackup="true" android:label="@string/app_name"
++        android:supportsRtl="true" android:theme="@style/Theme.Practice6">
++        <activity android:name=".MainActivity" android:exported="true">
++            <intent-filter>
++                <action android:name="android.intent.action.MAIN" />
++                <category android:name="android.intent.category.LAUNCHER" />
++            </intent-filter>
++        </activity>
++    </application>
++</manifest>
+diff --git a/Lesson56/ResultApiFragmentApp/src/main/java/ru/mirea/ptitsyn/resultapifragmentapp/BottomSheetFragment.java b/Lesson56/ResultApiFragmentApp/src/main/java/ru/mirea/ptitsyn/resultapifragmentapp/BottomSheetFragment.java
+new file mode 100644
+index 0000000..f03cec9
+--- /dev/null
++++ b/Lesson56/ResultApiFragmentApp/src/main/java/ru/mirea/ptitsyn/resultapifragmentapp/BottomSheetFragment.java
+@@ -0,0 +1,54 @@
++package ru.mirea.ptitsyn.resultapifragmentapp;
++
++import android.os.Bundle;
++import android.util.Log;
++import android.view.LayoutInflater;
++import android.view.View;
++import android.view.ViewGroup;
++import android.widget.TextView;
++import androidx.annotation.NonNull;
++import androidx.annotation.Nullable;
++import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
++
++public class BottomSheetFragment extends BottomSheetDialogFragment {
++    private String receivedText = "";
++
++    @Override
++    public void onCreate(@Nullable Bundle savedInstanceState) {
++        super.onCreate(savedInstanceState);
++        if (savedInstanceState != null) receivedText = savedInstanceState.getString("received_text", "");
++        getParentFragmentManager().setFragmentResultListener("requestKey",
++                this,
++                (requestKey, bundle) -> {
++            receivedText = bundle.getString("key", "");
++            Log.d("BottomSheetFragment", "Get text " + receivedText);
++            displayText();
++        });
++    }
++
++    @Nullable
++    @Override
++    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
++        return inflater.inflate(R.layout.fragment_bottom_sheet, container, false);
++    }
++
++    @Override
++    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
++        super.onViewCreated(view, savedInstanceState);
++        displayText();
++        view.findViewById(R.id.closeButton).setOnClickListener(button -> dismiss());
++    }
++
++    private void displayText() {
++        View view = getView();
++        if (view == null) return;
++        TextView text = view.findViewById(R.id.receivedText);
++        text.setText(receivedText.isEmpty() ? getString(R.string.empty_text) : receivedText);
++    }
++
++    @Override
++    public void onSaveInstanceState(@NonNull Bundle outState) {
++        outState.putString("received_text", receivedText);
++        super.onSaveInstanceState(outState);
++    }
++}
+diff --git a/Lesson56/ResultApiFragmentApp/src/main/java/ru/mirea/ptitsyn/resultapifragmentapp/DataFragment.java b/Lesson56/ResultApiFragmentApp/src/main/java/ru/mirea/ptitsyn/resultapifragmentapp/DataFragment.java
+new file mode 100644
+index 0000000..0e5f2b8
+--- /dev/null
++++ b/Lesson56/ResultApiFragmentApp/src/main/java/ru/mirea/ptitsyn/resultapifragmentapp/DataFragment.java
+@@ -0,0 +1,55 @@
++package ru.mirea.ptitsyn.resultapifragmentapp;
++
++import android.os.Bundle;
++import android.view.LayoutInflater;
++import android.view.View;
++import android.view.ViewGroup;
++import androidx.annotation.NonNull;
++import androidx.annotation.Nullable;
++import androidx.fragment.app.Fragment;
++
++import android.content.Context;
++import android.widget.EditText;
++import androidx.fragment.app.FragmentManager;
++
++public class DataFragment extends Fragment {
++    private FragmentListener listener;
++
++    @Override
++    public void onAttach(@NonNull Context context) {
++        super.onAttach(context);
++        if (!(context instanceof FragmentListener)) {
++            throw new IllegalStateException("Activity must implement FragmentListener");
++        }
++        listener = (FragmentListener) context;
++    }
++
++    @Nullable
++    @Override
++    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
++        return inflater.inflate(R.layout.fragment_data, container, false);
++    }
++
++    @Override
++    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
++        super.onViewCreated(view, savedInstanceState);
++        EditText input = view.findViewById(R.id.editTextInfo);
++        view.findViewById(R.id.buttonOpenBottomSheet).setOnClickListener(button -> {
++            FragmentManager manager = getChildFragmentManager();
++            if (manager.findFragmentByTag("ModalBottomSheet") != null || manager.isStateSaved()) return;
++            Bundle result = new Bundle();
++            result.putString("key", input.getText().toString());
++            manager.setFragmentResult("requestKey", result);
++            new BottomSheetFragment().show(manager, "ModalBottomSheet");
++        });
++        view.findViewById(R.id.buttonSendToActivity).setOnClickListener(button -> {
++            listener.sendResult(input.getText().toString());
++        });
++    }
++
++    @Override
++    public void onDetach() {
++        listener = null;
++        super.onDetach();
++    }
++}
+diff --git a/Lesson56/ResultApiFragmentApp/src/main/java/ru/mirea/ptitsyn/resultapifragmentapp/FragmentListener.java b/Lesson56/ResultApiFragmentApp/src/main/java/ru/mirea/ptitsyn/resultapifragmentapp/FragmentListener.java
+new file mode 100644
+index 0000000..2d612c3
+--- /dev/null
++++ b/Lesson56/ResultApiFragmentApp/src/main/java/ru/mirea/ptitsyn/resultapifragmentapp/FragmentListener.java
+@@ -0,0 +1,5 @@
++package ru.mirea.ptitsyn.resultapifragmentapp;
++
++public interface FragmentListener {
++    void sendResult(String message);
++}
+diff --git a/Lesson56/ResultApiFragmentApp/src/main/java/ru/mirea/ptitsyn/resultapifragmentapp/MainActivity.java b/Lesson56/ResultApiFragmentApp/src/main/java/ru/mirea/ptitsyn/resultapifragmentapp/MainActivity.java
+new file mode 100644
+index 0000000..a6fb476
+--- /dev/null
++++ b/Lesson56/ResultApiFragmentApp/src/main/java/ru/mirea/ptitsyn/resultapifragmentapp/MainActivity.java
+@@ -0,0 +1,51 @@
++package ru.mirea.ptitsyn.resultapifragmentapp;
++
++import android.os.Bundle;
++import androidx.appcompat.app.AppCompatActivity;
++import androidx.core.graphics.Insets;
++import androidx.core.view.ViewCompat;
++import androidx.core.view.WindowInsetsCompat;
++
++import android.util.Log;
++import android.widget.TextView;
++
++public class MainActivity extends AppCompatActivity implements FragmentListener {
++    private String lastResult;
++
++    @Override
++    protected void onCreate(Bundle savedInstanceState) {
++        super.onCreate(savedInstanceState);
++        setContentView(R.layout.activity_main);
++
++        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (view, insets) -> {
++            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.ime());
++            view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
++            return insets;
++        });
++
++        if (savedInstanceState == null) {
++            getSupportFragmentManager().beginTransaction().setReorderingAllowed(true)
++                    .add(R.id.dataContainer, DataFragment.class, null).commit();
++        } else {
++            lastResult = savedInstanceState.getString("activity_result");
++            if (lastResult != null) showResult();
++        }
++    }
++
++    @Override
++    public void sendResult(String message) {
++        lastResult = message;
++        Log.d("MainActivity", "message: " + message);
++        showResult();
++    }
++
++    private void showResult() {
++        ((TextView) findViewById(R.id.activityResult)).setText(getString(R.string.activity_result, lastResult));
++    }
++
++    @Override
++    protected void onSaveInstanceState(Bundle outState) {
++        outState.putString("activity_result", lastResult);
++        super.onSaveInstanceState(outState);
++    }
++}
+diff --git a/Lesson56/ResultApiFragmentApp/src/main/res/layout/activity_main.xml b/Lesson56/ResultApiFragmentApp/src/main/res/layout/activity_main.xml
+new file mode 100644
+index 0000000..3a44bc1
+--- /dev/null
++++ b/Lesson56/ResultApiFragmentApp/src/main/res/layout/activity_main.xml
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="utf-8"?>
++<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
++    android:id="@+id/main" android:layout_width="match_parent" android:layout_height="match_parent"
++    android:orientation="vertical">
++    <TextView android:id="@+id/activityResult" android:layout_width="match_parent"
++        android:layout_height="wrap_content" android:padding="16dp" android:text="@string/result_hint"
++        android:textSize="16sp" />
++    <androidx.fragment.app.FragmentContainerView android:id="@+id/dataContainer"
++        android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
++</LinearLayout>
+diff --git a/Lesson56/ResultApiFragmentApp/src/main/res/layout/fragment_bottom_sheet.xml b/Lesson56/ResultApiFragmentApp/src/main/res/layout/fragment_bottom_sheet.xml
+new file mode 100644
+index 0000000..fe53466
+--- /dev/null
++++ b/Lesson56/ResultApiFragmentApp/src/main/res/layout/fragment_bottom_sheet.xml
+@@ -0,0 +1,14 @@
++<?xml version="1.0" encoding="utf-8"?>
++<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
++    android:layout_width="match_parent" android:layout_height="wrap_content">
++    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
++        android:orientation="vertical" android:padding="24dp">
++        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
++            android:text="@string/sheet_title" android:textSize="22sp" android:textStyle="bold" />
++        <TextView android:id="@+id/receivedText" android:layout_width="match_parent"
++            android:layout_height="wrap_content" android:layout_marginTop="16dp"
++            android:textSize="18sp" android:textIsSelectable="true" />
++        <Button android:id="@+id/closeButton" android:layout_width="match_parent"
++            android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="@string/close" />
++    </LinearLayout>
++</ScrollView>
+diff --git a/Lesson56/ResultApiFragmentApp/src/main/res/layout/fragment_data.xml b/Lesson56/ResultApiFragmentApp/src/main/res/layout/fragment_data.xml
+new file mode 100644
+index 0000000..459df07
+--- /dev/null
++++ b/Lesson56/ResultApiFragmentApp/src/main/res/layout/fragment_data.xml
+@@ -0,0 +1,17 @@
++<?xml version="1.0" encoding="utf-8"?>
++<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
++    android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true">
++    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
++        android:orientation="vertical" android:padding="16dp">
++        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
++            android:text="@string/screen_title" android:textSize="22sp" android:textStyle="bold" />
++        <EditText android:id="@+id/editTextInfo" android:layout_width="match_parent"
++            android:layout_height="wrap_content" android:minHeight="48dp" android:layout_marginTop="16dp"
++            android:hint="@string/input_hint" android:inputType="textMultiLine" android:gravity="top"
++            android:autofillHints="" />
++        <Button android:id="@+id/buttonOpenBottomSheet" android:layout_width="match_parent"
++            android:layout_height="wrap_content" android:text="@string/send_to_sheet" />
++        <Button android:id="@+id/buttonSendToActivity" android:layout_width="match_parent"
++            android:layout_height="wrap_content" android:text="@string/send_to_activity" />
++    </LinearLayout>
++</ScrollView>
+diff --git a/Lesson56/ResultApiFragmentApp/src/main/res/values/strings.xml b/Lesson56/ResultApiFragmentApp/src/main/res/values/strings.xml
+new file mode 100644
+index 0000000..efbccd2
+--- /dev/null
++++ b/Lesson56/ResultApiFragmentApp/src/main/res/values/strings.xml
+@@ -0,0 +1,12 @@
++<resources>
++    <string name="app_name">ResultApiFragmentApp</string>
++    <string name="screen_title">Передача данных между фрагментами</string>
++    <string name="input_hint">Введите текст</string>
++    <string name="send_to_sheet">Передать в BottomSheet</string>
++    <string name="send_to_activity">Передать в Activity через интерфейс</string>
++    <string name="result_hint">Здесь Activity покажет результат вызова интерфейса</string>
++    <string name="activity_result">Activity получила: %1$s</string>
++    <string name="sheet_title">Данные из DataFragment</string>
++    <string name="empty_text">Передана пустая строка</string>
++    <string name="close">Закрыть</string>
++</resources>
+diff --git a/Lesson56/ResultApiFragmentApp/src/main/res/values/themes.xml b/Lesson56/ResultApiFragmentApp/src/main/res/values/themes.xml
+new file mode 100644
+index 0000000..c3b4a06
+--- /dev/null
++++ b/Lesson56/ResultApiFragmentApp/src/main/res/values/themes.xml
+@@ -0,0 +1,3 @@
++<resources>
++    <style name="Theme.Practice6" parent="Theme.Material3.DayNight.NoActionBar" />
++</resources>
+diff --git a/Lesson5/RetrofitApp/.gitignore b/Lesson56/RetrofitApp/.gitignore
+similarity index 100%
+rename from Lesson5/RetrofitApp/.gitignore
+rename to Lesson56/RetrofitApp/.gitignore
+diff --git a/Lesson5/RetrofitApp/build.gradle.kts b/Lesson56/RetrofitApp/build.gradle.kts
+similarity index 100%
+rename from Lesson5/RetrofitApp/build.gradle.kts
+rename to Lesson56/RetrofitApp/build.gradle.kts
+diff --git a/Lesson5/RetrofitApp/proguard-rules.pro b/Lesson56/RetrofitApp/proguard-rules.pro
+similarity index 100%
+rename from Lesson5/RetrofitApp/proguard-rules.pro
+rename to Lesson56/RetrofitApp/proguard-rules.pro
+diff --git a/Lesson5/RetrofitApp/src/androidTest/java/ru/mirea/ptitsyn/lesson5/ExampleInstrumentedTest.java b/Lesson56/RetrofitApp/src/androidTest/java/ru/mirea/ptitsyn/lesson5/ExampleInstrumentedTest.java
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/androidTest/java/ru/mirea/ptitsyn/lesson5/ExampleInstrumentedTest.java
+rename to Lesson56/RetrofitApp/src/androidTest/java/ru/mirea/ptitsyn/lesson5/ExampleInstrumentedTest.java
+diff --git a/Lesson5/RetrofitApp/src/main/AndroidManifest.xml b/Lesson56/RetrofitApp/src/main/AndroidManifest.xml
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/AndroidManifest.xml
+rename to Lesson56/RetrofitApp/src/main/AndroidManifest.xml
+diff --git a/Lesson5/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/ApiService.java b/Lesson56/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/ApiService.java
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/ApiService.java
+rename to Lesson56/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/ApiService.java
+diff --git a/Lesson5/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/MainActivity.java b/Lesson56/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/MainActivity.java
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/MainActivity.java
+rename to Lesson56/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/MainActivity.java
+diff --git a/Lesson5/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/Todo.java b/Lesson56/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/Todo.java
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/Todo.java
+rename to Lesson56/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/Todo.java
+diff --git a/Lesson5/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/TodoAdapter.java b/Lesson56/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/TodoAdapter.java
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/TodoAdapter.java
+rename to Lesson56/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/TodoAdapter.java
+diff --git a/Lesson5/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/TodoViewHolder.java b/Lesson56/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/TodoViewHolder.java
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/TodoViewHolder.java
+rename to Lesson56/RetrofitApp/src/main/java/ru/mirea/ptitsyn/lesson5/TodoViewHolder.java
+diff --git a/Lesson5/RetrofitApp/src/main/res/drawable/ic_launcher_background.xml b/Lesson56/RetrofitApp/src/main/res/drawable/ic_launcher_background.xml
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/drawable/ic_launcher_background.xml
+rename to Lesson56/RetrofitApp/src/main/res/drawable/ic_launcher_background.xml
+diff --git a/Lesson5/RetrofitApp/src/main/res/drawable/ic_launcher_foreground.xml b/Lesson56/RetrofitApp/src/main/res/drawable/ic_launcher_foreground.xml
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/drawable/ic_launcher_foreground.xml
+rename to Lesson56/RetrofitApp/src/main/res/drawable/ic_launcher_foreground.xml
+diff --git a/Lesson5/RetrofitApp/src/main/res/drawable/image_error.xml b/Lesson56/RetrofitApp/src/main/res/drawable/image_error.xml
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/drawable/image_error.xml
+rename to Lesson56/RetrofitApp/src/main/res/drawable/image_error.xml
+diff --git a/Lesson5/RetrofitApp/src/main/res/drawable/image_placeholder.xml b/Lesson56/RetrofitApp/src/main/res/drawable/image_placeholder.xml
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/drawable/image_placeholder.xml
+rename to Lesson56/RetrofitApp/src/main/res/drawable/image_placeholder.xml
+diff --git a/Lesson5/RetrofitApp/src/main/res/layout/activity_main.xml b/Lesson56/RetrofitApp/src/main/res/layout/activity_main.xml
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/layout/activity_main.xml
+rename to Lesson56/RetrofitApp/src/main/res/layout/activity_main.xml
+diff --git a/Lesson5/RetrofitApp/src/main/res/layout/item.xml b/Lesson56/RetrofitApp/src/main/res/layout/item.xml
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/layout/item.xml
+rename to Lesson56/RetrofitApp/src/main/res/layout/item.xml
+diff --git a/Lesson5/RetrofitApp/src/main/res/mipmap-anydpi/ic_launcher.xml b/Lesson56/RetrofitApp/src/main/res/mipmap-anydpi/ic_launcher.xml
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/mipmap-anydpi/ic_launcher.xml
+rename to Lesson56/RetrofitApp/src/main/res/mipmap-anydpi/ic_launcher.xml
+diff --git a/Lesson5/RetrofitApp/src/main/res/mipmap-anydpi/ic_launcher_round.xml b/Lesson56/RetrofitApp/src/main/res/mipmap-anydpi/ic_launcher_round.xml
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/mipmap-anydpi/ic_launcher_round.xml
+rename to Lesson56/RetrofitApp/src/main/res/mipmap-anydpi/ic_launcher_round.xml
+diff --git a/Lesson5/RetrofitApp/src/main/res/mipmap-hdpi/ic_launcher.webp b/Lesson56/RetrofitApp/src/main/res/mipmap-hdpi/ic_launcher.webp
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/mipmap-hdpi/ic_launcher.webp
+rename to Lesson56/RetrofitApp/src/main/res/mipmap-hdpi/ic_launcher.webp
+diff --git a/Lesson5/RetrofitApp/src/main/res/mipmap-hdpi/ic_launcher_round.webp b/Lesson56/RetrofitApp/src/main/res/mipmap-hdpi/ic_launcher_round.webp
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/mipmap-hdpi/ic_launcher_round.webp
+rename to Lesson56/RetrofitApp/src/main/res/mipmap-hdpi/ic_launcher_round.webp
+diff --git a/Lesson5/RetrofitApp/src/main/res/mipmap-mdpi/ic_launcher.webp b/Lesson56/RetrofitApp/src/main/res/mipmap-mdpi/ic_launcher.webp
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/mipmap-mdpi/ic_launcher.webp
+rename to Lesson56/RetrofitApp/src/main/res/mipmap-mdpi/ic_launcher.webp
+diff --git a/Lesson5/RetrofitApp/src/main/res/mipmap-mdpi/ic_launcher_round.webp b/Lesson56/RetrofitApp/src/main/res/mipmap-mdpi/ic_launcher_round.webp
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/mipmap-mdpi/ic_launcher_round.webp
+rename to Lesson56/RetrofitApp/src/main/res/mipmap-mdpi/ic_launcher_round.webp
+diff --git a/Lesson5/RetrofitApp/src/main/res/mipmap-xhdpi/ic_launcher.webp b/Lesson56/RetrofitApp/src/main/res/mipmap-xhdpi/ic_launcher.webp
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/mipmap-xhdpi/ic_launcher.webp
+rename to Lesson56/RetrofitApp/src/main/res/mipmap-xhdpi/ic_launcher.webp
+diff --git a/Lesson5/RetrofitApp/src/main/res/mipmap-xhdpi/ic_launcher_round.webp b/Lesson56/RetrofitApp/src/main/res/mipmap-xhdpi/ic_launcher_round.webp
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/mipmap-xhdpi/ic_launcher_round.webp
+rename to Lesson56/RetrofitApp/src/main/res/mipmap-xhdpi/ic_launcher_round.webp
+diff --git a/Lesson5/RetrofitApp/src/main/res/mipmap-xxhdpi/ic_launcher.webp b/Lesson56/RetrofitApp/src/main/res/mipmap-xxhdpi/ic_launcher.webp
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/mipmap-xxhdpi/ic_launcher.webp
+rename to Lesson56/RetrofitApp/src/main/res/mipmap-xxhdpi/ic_launcher.webp
+diff --git a/Lesson5/RetrofitApp/src/main/res/mipmap-xxhdpi/ic_launcher_round.webp b/Lesson56/RetrofitApp/src/main/res/mipmap-xxhdpi/ic_launcher_round.webp
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/mipmap-xxhdpi/ic_launcher_round.webp
+rename to Lesson56/RetrofitApp/src/main/res/mipmap-xxhdpi/ic_launcher_round.webp
+diff --git a/Lesson5/RetrofitApp/src/main/res/mipmap-xxxhdpi/ic_launcher.webp b/Lesson56/RetrofitApp/src/main/res/mipmap-xxxhdpi/ic_launcher.webp
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/mipmap-xxxhdpi/ic_launcher.webp
+rename to Lesson56/RetrofitApp/src/main/res/mipmap-xxxhdpi/ic_launcher.webp
+diff --git a/Lesson5/RetrofitApp/src/main/res/mipmap-xxxhdpi/ic_launcher_round.webp b/Lesson56/RetrofitApp/src/main/res/mipmap-xxxhdpi/ic_launcher_round.webp
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/mipmap-xxxhdpi/ic_launcher_round.webp
+rename to Lesson56/RetrofitApp/src/main/res/mipmap-xxxhdpi/ic_launcher_round.webp
+diff --git a/Lesson5/RetrofitApp/src/main/res/values-night/themes.xml b/Lesson56/RetrofitApp/src/main/res/values-night/themes.xml
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/values-night/themes.xml
+rename to Lesson56/RetrofitApp/src/main/res/values-night/themes.xml
+diff --git a/Lesson5/RetrofitApp/src/main/res/values/colors.xml b/Lesson56/RetrofitApp/src/main/res/values/colors.xml
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/values/colors.xml
+rename to Lesson56/RetrofitApp/src/main/res/values/colors.xml
+diff --git a/Lesson5/RetrofitApp/src/main/res/values/strings.xml b/Lesson56/RetrofitApp/src/main/res/values/strings.xml
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/values/strings.xml
+rename to Lesson56/RetrofitApp/src/main/res/values/strings.xml
+diff --git a/Lesson5/RetrofitApp/src/main/res/values/themes.xml b/Lesson56/RetrofitApp/src/main/res/values/themes.xml
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/values/themes.xml
+rename to Lesson56/RetrofitApp/src/main/res/values/themes.xml
+diff --git a/Lesson5/RetrofitApp/src/main/res/xml/backup_rules.xml b/Lesson56/RetrofitApp/src/main/res/xml/backup_rules.xml
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/xml/backup_rules.xml
+rename to Lesson56/RetrofitApp/src/main/res/xml/backup_rules.xml
+diff --git a/Lesson5/RetrofitApp/src/main/res/xml/data_extraction_rules.xml b/Lesson56/RetrofitApp/src/main/res/xml/data_extraction_rules.xml
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/main/res/xml/data_extraction_rules.xml
+rename to Lesson56/RetrofitApp/src/main/res/xml/data_extraction_rules.xml
+diff --git a/Lesson5/RetrofitApp/src/test/java/ru/mirea/ptitsyn/lesson5/ExampleUnitTest.java b/Lesson56/RetrofitApp/src/test/java/ru/mirea/ptitsyn/lesson5/ExampleUnitTest.java
+similarity index 100%
+rename from Lesson5/RetrofitApp/src/test/java/ru/mirea/ptitsyn/lesson5/ExampleUnitTest.java
+rename to Lesson56/RetrofitApp/src/test/java/ru/mirea/ptitsyn/lesson5/ExampleUnitTest.java
+diff --git a/Lesson5/build.gradle.kts b/Lesson56/build.gradle.kts
+similarity index 100%
+rename from Lesson5/build.gradle.kts
+rename to Lesson56/build.gradle.kts
+diff --git a/Lesson56/fragmentapp/.gitignore b/Lesson56/fragmentapp/.gitignore
+new file mode 100644
+index 0000000..42afabf
+--- /dev/null
++++ b/Lesson56/fragmentapp/.gitignore
+@@ -0,0 +1 @@
++/build
+\ No newline at end of file
+diff --git a/Lesson56/fragmentapp/build.gradle.kts b/Lesson56/fragmentapp/build.gradle.kts
+new file mode 100644
+index 0000000..633f1c8
+--- /dev/null
++++ b/Lesson56/fragmentapp/build.gradle.kts
+@@ -0,0 +1,47 @@
++plugins {
++    alias(libs.plugins.android.application)
++}
++
++android {
++    namespace = "ru.mirea.ptitsyn.fragmentapp"
++    compileSdk {
++        version = release(36) {
++            minorApiLevel = 1
++        }
++    }
++
++    defaultConfig {
++        applicationId = "ru.mirea.ptitsyn.fragmentapp"
++        minSdk = 27
++        targetSdk = 36
++        versionCode = 1
++        versionName = "1.0"
++
++        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
++    }
++
++    buildTypes {
++        release {
++            isMinifyEnabled = false
++            proguardFiles(
++                getDefaultProguardFile("proguard-android-optimize.txt"),
++                "proguard-rules.pro"
++            )
++        }
++    }
++    compileOptions {
++        sourceCompatibility = JavaVersion.VERSION_11
++        targetCompatibility = JavaVersion.VERSION_11
++    }
++}
++
++dependencies {
++    implementation("androidx.fragment:fragment:1.8.5")
++    implementation(libs.appcompat)
++    implementation(libs.material)
++    implementation(libs.activity)
++    implementation(libs.constraintlayout)
++    testImplementation(libs.junit)
++    androidTestImplementation(libs.ext.junit)
++    androidTestImplementation(libs.espresso.core)
++}
+\ No newline at end of file
+diff --git a/Lesson56/fragmentapp/proguard-rules.pro b/Lesson56/fragmentapp/proguard-rules.pro
+new file mode 100644
+index 0000000..481bb43
+--- /dev/null
++++ b/Lesson56/fragmentapp/proguard-rules.pro
+@@ -0,0 +1,21 @@
++# Add project specific ProGuard rules here.
++# You can control the set of applied configuration files using the
++# proguardFiles setting in build.gradle.
++#
++# For more details, see
++#   http://developer.android.com/guide/developing/tools/proguard.html
++
++# If your project uses WebView with JS, uncomment the following
++# and specify the fully qualified class name to the JavaScript interface
++# class:
++#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
++#   public *;
++#}
++
++# Uncomment this to preserve the line number information for
++# debugging stack traces.
++#-keepattributes SourceFile,LineNumberTable
++
++# If you keep the line number information, uncomment this to
++# hide the original source file name.
++#-renamesourcefileattribute SourceFile
+\ No newline at end of file
+diff --git a/Lesson56/fragmentapp/src/androidTest/java/ru/mirea/ptitsyn/fragmentapp/ExampleInstrumentedTest.java b/Lesson56/fragmentapp/src/androidTest/java/ru/mirea/ptitsyn/fragmentapp/ExampleInstrumentedTest.java
+new file mode 100644
+index 0000000..e54de96
+--- /dev/null
++++ b/Lesson56/fragmentapp/src/androidTest/java/ru/mirea/ptitsyn/fragmentapp/ExampleInstrumentedTest.java
+@@ -0,0 +1,26 @@
++package ru.mirea.ptitsyn.fragmentapp;
++
++import android.content.Context;
++
++import androidx.test.platform.app.InstrumentationRegistry;
++import androidx.test.ext.junit.runners.AndroidJUnit4;
++
++import org.junit.Test;
++import org.junit.runner.RunWith;
++
++import static org.junit.Assert.*;
++
++/**
++ * Instrumented test, which will execute on an Android device.
++ *
++ * @see <a href="http://d.android.com/tools/testing">Testing documentation</a>
++ */
++@RunWith(AndroidJUnit4.class)
++public class ExampleInstrumentedTest {
++    @Test
++    public void useAppContext() {
++        // Context of the app under test.
++        Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
++        assertEquals("ru.mirea.ptitsyn.fragmentapp", appContext.getPackageName());
++    }
++}
+\ No newline at end of file
+diff --git a/Lesson56/fragmentapp/src/main/AndroidManifest.xml b/Lesson56/fragmentapp/src/main/AndroidManifest.xml
+new file mode 100644
+index 0000000..1177fed
+--- /dev/null
++++ b/Lesson56/fragmentapp/src/main/AndroidManifest.xml
+@@ -0,0 +1,22 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android">
++
++    <application
++        android:allowBackup="true"
++        android:icon="@mipmap/ic_launcher"
++        android:label="@string/app_name"
++        android:roundIcon="@mipmap/ic_launcher_round"
++        android:supportsRtl="true"
++        android:theme="@style/Theme.Lesson5">
++        <activity
++            android:name=".MainActivity"
++            android:exported="true">
++            <intent-filter>
++                <action android:name="android.intent.action.MAIN" />
++
++                <category android:name="android.intent.category.LAUNCHER" />
++            </intent-filter>
++        </activity>
++    </application>
++
++</manifest>
+\ No newline at end of file
+diff --git a/Lesson56/fragmentapp/src/main/java/ru/mirea/ptitsyn/fragmentapp/BlankFragment.java b/Lesson56/fragmentapp/src/main/java/ru/mirea/ptitsyn/fragmentapp/BlankFragment.java
+new file mode 100644
+index 0000000..80559be
+--- /dev/null
++++ b/Lesson56/fragmentapp/src/main/java/ru/mirea/ptitsyn/fragmentapp/BlankFragment.java
+@@ -0,0 +1,36 @@
++package ru.mirea.ptitsyn.fragmentapp;
++
++import android.os.Bundle;
++import android.view.LayoutInflater;
++import android.view.View;
++import android.view.ViewGroup;
++import androidx.annotation.NonNull;
++import androidx.annotation.Nullable;
++import androidx.fragment.app.Fragment;
++
++import android.util.Log;
++import android.widget.ArrayAdapter;
++import android.widget.ListView;
++import android.widget.TextView;
++
++public class BlankFragment extends Fragment {
++    @Nullable
++    @Override
++    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
++        return inflater.inflate(R.layout.fragment_blank, container, false);
++    }
++
++    @Override
++    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
++        super.onViewCreated(view, savedInstanceState);
++        int numberStudent = requireArguments().getInt("studentNumber");
++        Log.d("BlankFragment", "studentNumber=" + numberStudent);
++        ((TextView) view.findViewById(R.id.numberText)).setText(getString(R.string.student_number, numberStudent));
++
++        ListView todoList = view.findViewById(R.id.todoList);
++        String[] todos = getResources().getStringArray(R.array.todos);
++        ArrayAdapter<String> adapter = new ArrayAdapter<>(
++                requireContext(), android.R.layout.simple_list_item_multiple_choice, todos);
++        todoList.setAdapter(adapter);
++    }
++}
+diff --git a/Lesson56/fragmentapp/src/main/java/ru/mirea/ptitsyn/fragmentapp/MainActivity.java b/Lesson56/fragmentapp/src/main/java/ru/mirea/ptitsyn/fragmentapp/MainActivity.java
+new file mode 100644
+index 0000000..d299c71
+--- /dev/null
++++ b/Lesson56/fragmentapp/src/main/java/ru/mirea/ptitsyn/fragmentapp/MainActivity.java
+@@ -0,0 +1,28 @@
++package ru.mirea.ptitsyn.fragmentapp;
++
++import android.os.Bundle;
++import androidx.appcompat.app.AppCompatActivity;
++import androidx.core.graphics.Insets;
++import androidx.core.view.ViewCompat;
++import androidx.core.view.WindowInsetsCompat;
++
++public class MainActivity extends AppCompatActivity {
++    @Override
++    protected void onCreate(Bundle savedInstanceState) {
++        super.onCreate(savedInstanceState);
++        setContentView(R.layout.activity_main);
++
++        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (view, insets) -> {
++            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.ime());
++            view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
++            return insets;
++        });
++
++        if (savedInstanceState == null) {
++            Bundle bundle = new Bundle();
++            bundle.putInt("studentNumber", 20);
++            getSupportFragmentManager().beginTransaction().setReorderingAllowed(true)
++                    .add(R.id.fragment_container_view, BlankFragment.class, bundle).commit();
++        }
++    }
++}
+diff --git a/Lesson56/fragmentapp/src/main/res/drawable/ic_launcher_background.xml b/Lesson56/fragmentapp/src/main/res/drawable/ic_launcher_background.xml
+new file mode 100644
+index 0000000..07d5da9
+--- /dev/null
++++ b/Lesson56/fragmentapp/src/main/res/drawable/ic_launcher_background.xml
+@@ -0,0 +1,170 @@
++<?xml version="1.0" encoding="utf-8"?>
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="108dp"
++    android:height="108dp"
++    android:viewportWidth="108"
++    android:viewportHeight="108">
++    <path
++        android:fillColor="#3DDC84"
++        android:pathData="M0,0h108v108h-108z" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M9,0L9,108"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M19,0L19,108"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M29,0L29,108"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M39,0L39,108"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M49,0L49,108"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M59,0L59,108"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M69,0L69,108"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M79,0L79,108"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M89,0L89,108"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M99,0L99,108"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M0,9L108,9"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M0,19L108,19"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M0,29L108,29"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M0,39L108,39"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M0,49L108,49"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M0,59L108,59"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M0,69L108,69"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M0,79L108,79"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M0,89L108,89"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M0,99L108,99"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M19,29L89,29"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M19,39L89,39"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M19,49L89,49"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M19,59L89,59"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M19,69L89,69"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M19,79L89,79"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M29,19L29,89"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M39,19L39,89"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M49,19L49,89"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M59,19L59,89"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M69,19L69,89"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++    <path
++        android:fillColor="#00000000"
++        android:pathData="M79,19L79,89"
++        android:strokeWidth="0.8"
++        android:strokeColor="#33FFFFFF" />
++</vector>
+diff --git a/Lesson56/fragmentapp/src/main/res/drawable/ic_launcher_foreground.xml b/Lesson56/fragmentapp/src/main/res/drawable/ic_launcher_foreground.xml
+new file mode 100644
+index 0000000..2b068d1
+--- /dev/null
++++ b/Lesson56/fragmentapp/src/main/res/drawable/ic_launcher_foreground.xml
+@@ -0,0 +1,30 @@
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    xmlns:aapt="http://schemas.android.com/aapt"
++    android:width="108dp"
++    android:height="108dp"
++    android:viewportWidth="108"
++    android:viewportHeight="108">
++    <path android:pathData="M31,63.928c0,0 6.4,-11 12.1,-13.1c7.2,-2.6 26,-1.4 26,-1.4l38.1,38.1L107,108.928l-32,-1L31,63.928z">
++        <aapt:attr name="android:fillColor">
++            <gradient
++                android:endX="85.84757"
++                android:endY="92.4963"
++                android:startX="42.9492"
++                android:startY="49.59793"
++                android:type="linear">
++                <item
++                    android:color="#44000000"
++                    android:offset="0.0" />
++                <item
++                    android:color="#00000000"
++                    android:offset="1.0" />
++            </gradient>
++        </aapt:attr>
++    </path>
++    <path
++        android:fillColor="#FFFFFF"
++        android:fillType="nonZero"
++        android:pathData="M65.3,45.828l3.8,-6.6c0.2,-0.4 0.1,-0.9 -0.3,-1.1c-0.4,-0.2 -0.9,-0.1 -1.1,0.3l-3.9,6.7c-6.3,-2.8 -13.4,-2.8 -19.7,0l-3.9,-6.7c-0.2,-0.4 -0.7,-0.5 -1.1,-0.3C38.8,38.328 38.7,38.828 38.9,39.228l3.8,6.6C36.2,49.428 31.7,56.028 31,63.928h46C76.3,56.028 71.8,49.428 65.3,45.828zM43.4,57.328c-0.8,0 -1.5,-0.5 -1.8,-1.2c-0.3,-0.7 -0.1,-1.5 0.4,-2.1c0.5,-0.5 1.4,-0.7 2.1,-0.4c0.7,0.3 1.2,1 1.2,1.8C45.3,56.528 44.5,57.328 43.4,57.328L43.4,57.328zM64.6,57.328c-0.8,0 -1.5,-0.5 -1.8,-1.2s-0.1,-1.5 0.4,-2.1c0.5,-0.5 1.4,-0.7 2.1,-0.4c0.7,0.3 1.2,1 1.2,1.8C66.5,56.528 65.6,57.328 64.6,57.328L64.6,57.328z"
++        android:strokeWidth="1"
++        android:strokeColor="#00000000" />
++</vector>
+\ No newline at end of file
+diff --git a/Lesson56/fragmentapp/src/main/res/layout/activity_main.xml b/Lesson56/fragmentapp/src/main/res/layout/activity_main.xml
+new file mode 100644
+index 0000000..54cd230
+--- /dev/null
++++ b/Lesson56/fragmentapp/src/main/res/layout/activity_main.xml
+@@ -0,0 +1,7 @@
++<?xml version="1.0" encoding="utf-8"?>
++<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
++    android:id="@+id/main" android:layout_width="match_parent" android:layout_height="match_parent"
++    android:orientation="vertical">
++    <androidx.fragment.app.FragmentContainerView android:id="@+id/fragment_container_view"
++        android:layout_width="match_parent" android:layout_height="match_parent" />
++</LinearLayout>
+diff --git a/Lesson56/fragmentapp/src/main/res/layout/fragment_blank.xml b/Lesson56/fragmentapp/src/main/res/layout/fragment_blank.xml
+new file mode 100644
+index 0000000..c8abc54
+--- /dev/null
++++ b/Lesson56/fragmentapp/src/main/res/layout/fragment_blank.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
++    android:layout_width="match_parent" android:layout_height="match_parent"
++    android:orientation="vertical" android:padding="16dp">
++    <TextView android:id="@+id/numberText" android:layout_width="match_parent"
++        android:layout_height="wrap_content" android:textSize="22sp" android:textStyle="bold" />
++    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
++        android:layout_marginTop="12dp" android:text="@string/todo_hint" android:textSize="16sp" />
++    <ListView android:id="@+id/todoList" android:layout_width="match_parent" android:layout_height="0dp"
++        android:layout_weight="1" android:choiceMode="multipleChoice" android:layout_marginTop="8dp" />
++</LinearLayout>
+diff --git a/Lesson56/fragmentapp/src/main/res/mipmap-anydpi/ic_launcher.xml b/Lesson56/fragmentapp/src/main/res/mipmap-anydpi/ic_launcher.xml
+new file mode 100644
+index 0000000..6f3b755
+--- /dev/null
++++ b/Lesson56/fragmentapp/src/main/res/mipmap-anydpi/ic_launcher.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
++    <background android:drawable="@drawable/ic_launcher_background" />
++    <foreground android:drawable="@drawable/ic_launcher_foreground" />
++    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
++</adaptive-icon>
+\ No newline at end of file
+diff --git a/Lesson56/fragmentapp/src/main/res/mipmap-anydpi/ic_launcher_round.xml b/Lesson56/fragmentapp/src/main/res/mipmap-anydpi/ic_launcher_round.xml
+new file mode 100644
+index 0000000..6f3b755
+--- /dev/null
++++ b/Lesson56/fragmentapp/src/main/res/mipmap-anydpi/ic_launcher_round.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
++    <background android:drawable="@drawable/ic_launcher_background" />
++    <foreground android:drawable="@drawable/ic_launcher_foreground" />
++    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
++</adaptive-icon>
+\ No newline at end of file
+diff --git a/Lesson56/fragmentapp/src/main/res/mipmap-hdpi/ic_launcher.webp b/Lesson56/fragmentapp/src/main/res/mipmap-hdpi/ic_launcher.webp
+new file mode 100644
+index 0000000..c209e78
+Binary files /dev/null and b/Lesson56/fragmentapp/src/main/res/mipmap-hdpi/ic_launcher.webp differ
+diff --git a/Lesson56/fragmentapp/src/main/res/mipmap-hdpi/ic_launcher_round.webp b/Lesson56/fragmentapp/src/main/res/mipmap-hdpi/ic_launcher_round.webp
+new file mode 100644
+index 0000000..b2dfe3d
+Binary files /dev/null and b/Lesson56/fragmentapp/src/main/res/mipmap-hdpi/ic_launcher_round.webp differ
+diff --git a/Lesson56/fragmentapp/src/main/res/mipmap-mdpi/ic_launcher.webp b/Lesson56/fragmentapp/src/main/res/mipmap-mdpi/ic_launcher.webp
+new file mode 100644
+index 0000000..4f0f1d6
+Binary files /dev/null and b/Lesson56/fragmentapp/src/main/res/mipmap-mdpi/ic_launcher.webp differ
+diff --git a/Lesson56/fragmentapp/src/main/res/mipmap-mdpi/ic_launcher_round.webp b/Lesson56/fragmentapp/src/main/res/mipmap-mdpi/ic_launcher_round.webp
+new file mode 100644
+index 0000000..62b611d
+Binary files /dev/null and b/Lesson56/fragmentapp/src/main/res/mipmap-mdpi/ic_launcher_round.webp differ
+diff --git a/Lesson56/fragmentapp/src/main/res/mipmap-xhdpi/ic_launcher.webp b/Lesson56/fragmentapp/src/main/res/mipmap-xhdpi/ic_launcher.webp
+new file mode 100644
+index 0000000..948a307
+Binary files /dev/null and b/Lesson56/fragmentapp/src/main/res/mipmap-xhdpi/ic_launcher.webp differ
+diff --git a/Lesson56/fragmentapp/src/main/res/mipmap-xhdpi/ic_launcher_round.webp b/Lesson56/fragmentapp/src/main/res/mipmap-xhdpi/ic_launcher_round.webp
+new file mode 100644
+index 0000000..1b9a695
+Binary files /dev/null and b/Lesson56/fragmentapp/src/main/res/mipmap-xhdpi/ic_launcher_round.webp differ
+diff --git a/Lesson56/fragmentapp/src/main/res/mipmap-xxhdpi/ic_launcher.webp b/Lesson56/fragmentapp/src/main/res/mipmap-xxhdpi/ic_launcher.webp
+new file mode 100644
+index 0000000..28d4b77
+Binary files /dev/null and b/Lesson56/fragmentapp/src/main/res/mipmap-xxhdpi/ic_launcher.webp differ
+diff --git a/Lesson56/fragmentapp/src/main/res/mipmap-xxhdpi/ic_launcher_round.webp b/Lesson56/fragmentapp/src/main/res/mipmap-xxhdpi/ic_launcher_round.webp
+new file mode 100644
+index 0000000..9287f50
+Binary files /dev/null and b/Lesson56/fragmentapp/src/main/res/mipmap-xxhdpi/ic_launcher_round.webp differ
+diff --git a/Lesson56/fragmentapp/src/main/res/mipmap-xxxhdpi/ic_launcher.webp b/Lesson56/fragmentapp/src/main/res/mipmap-xxxhdpi/ic_launcher.webp
+new file mode 100644
+index 0000000..aa7d642
+Binary files /dev/null and b/Lesson56/fragmentapp/src/main/res/mipmap-xxxhdpi/ic_launcher.webp differ
+diff --git a/Lesson56/fragmentapp/src/main/res/mipmap-xxxhdpi/ic_launcher_round.webp b/Lesson56/fragmentapp/src/main/res/mipmap-xxxhdpi/ic_launcher_round.webp
+new file mode 100644
+index 0000000..9126ae3
+Binary files /dev/null and b/Lesson56/fragmentapp/src/main/res/mipmap-xxxhdpi/ic_launcher_round.webp differ
+diff --git a/Lesson56/fragmentapp/src/main/res/values-night/themes.xml b/Lesson56/fragmentapp/src/main/res/values-night/themes.xml
+new file mode 100644
+index 0000000..0291347
+--- /dev/null
++++ b/Lesson56/fragmentapp/src/main/res/values-night/themes.xml
+@@ -0,0 +1,7 @@
++<resources xmlns:tools="http://schemas.android.com/tools">
++    <!-- Base application theme. -->
++    <style name="Base.Theme.Lesson5" parent="Theme.Material3.DayNight.NoActionBar">
++        <!-- Customize your dark theme here. -->
++        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
++    </style>
++</resources>
+\ No newline at end of file
+diff --git a/Lesson56/fragmentapp/src/main/res/values/colors.xml b/Lesson56/fragmentapp/src/main/res/values/colors.xml
+new file mode 100644
+index 0000000..c8524cd
+--- /dev/null
++++ b/Lesson56/fragmentapp/src/main/res/values/colors.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <color name="black">#FF000000</color>
++    <color name="white">#FFFFFFFF</color>
++</resources>
+\ No newline at end of file
+diff --git a/Lesson56/fragmentapp/src/main/res/values/strings.xml b/Lesson56/fragmentapp/src/main/res/values/strings.xml
+new file mode 100644
+index 0000000..91f5a99
+--- /dev/null
++++ b/Lesson56/fragmentapp/src/main/res/values/strings.xml
+@@ -0,0 +1,12 @@
++<resources>
++    <string name="app_name">FragmentApp</string>
++    <string name="student_number">Номер по списку: %1$d</string>
++    <string name="todo_hint">Список дел. Галочка обозначает выполненное дело.</string>
++    <string-array name="todos">
++        <item>Изучить жизненный цикл Fragment</item>
++        <item>Передать номер по списку через Bundle</item>
++        <item>Создать список и экран подробностей</item>
++        <item>Реализовать общую ViewModel</item>
++        <item>Передать текст через Fragment Result API</item>
++    </string-array>
++</resources>
+diff --git a/Lesson56/fragmentapp/src/main/res/values/themes.xml b/Lesson56/fragmentapp/src/main/res/values/themes.xml
+new file mode 100644
+index 0000000..2ed048e
+--- /dev/null
++++ b/Lesson56/fragmentapp/src/main/res/values/themes.xml
+@@ -0,0 +1,9 @@
++<resources xmlns:tools="http://schemas.android.com/tools">
++    <!-- Base application theme. -->
++    <style name="Base.Theme.Lesson5" parent="Theme.Material3.DayNight.NoActionBar">
++        <!-- Customize your light theme here. -->
++        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
++    </style>
++
++    <style name="Theme.Lesson5" parent="Base.Theme.Lesson5" />
++</resources>
+\ No newline at end of file
+diff --git a/Lesson56/fragmentapp/src/test/java/ru/mirea/ptitsyn/fragmentapp/ExampleUnitTest.java b/Lesson56/fragmentapp/src/test/java/ru/mirea/ptitsyn/fragmentapp/ExampleUnitTest.java
+new file mode 100644
+index 0000000..cf94667
+--- /dev/null
++++ b/Lesson56/fragmentapp/src/test/java/ru/mirea/ptitsyn/fragmentapp/ExampleUnitTest.java
+@@ -0,0 +1,17 @@
++package ru.mirea.ptitsyn.fragmentapp;
++
++import org.junit.Test;
++
++import static org.junit.Assert.*;
++
++/**
++ * Example local unit test, which will execute on the development machine (host).
++ *
++ * @see <a href="http://d.android.com/tools/testing">Testing documentation</a>
++ */
++public class ExampleUnitTest {
++    @Test
++    public void addition_isCorrect() {
++        assertEquals(4, 2 + 2);
++    }
++}
+\ No newline at end of file
+diff --git a/Lesson5/gradle.properties b/Lesson56/gradle.properties
+similarity index 100%
+rename from Lesson5/gradle.properties
+rename to Lesson56/gradle.properties
+diff --git a/Lesson5/gradle/gradle-daemon-jvm.properties b/Lesson56/gradle/gradle-daemon-jvm.properties
+similarity index 100%
+rename from Lesson5/gradle/gradle-daemon-jvm.properties
+rename to Lesson56/gradle/gradle-daemon-jvm.properties
+diff --git a/Lesson5/gradle/libs.versions.toml b/Lesson56/gradle/libs.versions.toml
+similarity index 100%
+rename from Lesson5/gradle/libs.versions.toml
+rename to Lesson56/gradle/libs.versions.toml
+diff --git a/Lesson5/gradle/wrapper/gradle-wrapper.jar b/Lesson56/gradle/wrapper/gradle-wrapper.jar
+similarity index 100%
+rename from Lesson5/gradle/wrapper/gradle-wrapper.jar
+rename to Lesson56/gradle/wrapper/gradle-wrapper.jar
+diff --git a/Lesson5/gradle/wrapper/gradle-wrapper.properties b/Lesson56/gradle/wrapper/gradle-wrapper.properties
+similarity index 100%
+rename from Lesson5/gradle/wrapper/gradle-wrapper.properties
+rename to Lesson56/gradle/wrapper/gradle-wrapper.properties
+diff --git a/Lesson5/gradlew b/Lesson56/gradlew
+similarity index 100%
+rename from Lesson5/gradlew
+rename to Lesson56/gradlew
+diff --git a/Lesson5/gradlew.bat b/Lesson56/gradlew.bat
+similarity index 100%
+rename from Lesson5/gradlew.bat
+rename to Lesson56/gradlew.bat
+diff --git a/Lesson5/settings.gradle.kts b/Lesson56/settings.gradle.kts
+similarity index 88%
+rename from Lesson5/settings.gradle.kts
+rename to Lesson56/settings.gradle.kts
+index baeac52..e84d3ac 100644
+--- a/Lesson5/settings.gradle.kts
++++ b/Lesson56/settings.gradle.kts
+@@ -24,4 +24,5 @@ dependencyResolutionManagement {
+ 
+ rootProject.name = "Lesson5"
+ include(":RetrofitApp")
+- 
+\ No newline at end of file
++include(":fragmentapp")
++include(":FragmentManagerApp", ":ResultApiFragmentApp")

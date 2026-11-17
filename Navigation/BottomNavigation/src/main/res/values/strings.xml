@@ -11,6 +11,6 @@
     <string name="profile_label">Профиль</string>
     <string name="profile_title">Профиль студента</string>
     <string name="profile_subtitle">Учебный органайзер</string>
-    <string name="profile_body">Студент: Фёдор Птицын\n\nНомер по списку: 20\n\nДисциплина: разработка мобильных приложений.</string>
+    <string name="profile_body">Студент: Фёдор Птицын\n\nНомер по списку: 20\n</string>
     <string name="drawer_subtitle">Список чтения и категории</string>
 </resources>

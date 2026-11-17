@@ -1,10 +1,9 @@
 package ru.mirea.ptitsyn.englisharound.presentation.fragments;
 
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.Button;
-import android.widget.ProgressBar;
-import android.widget.TextView;
+import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -12,14 +11,19 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import ru.mirea.ptitsyn.domain.models.User;
-import ru.mirea.ptitsyn.englisharound.R;
+import ru.mirea.ptitsyn.englisharound.databinding.FragmentProfileBinding;
 import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModel;
 import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModelFactory;
 
 public final class ProfileFragment extends Fragment {
 
-    public ProfileFragment() {
-        super(R.layout.fragment_profile);
+    private FragmentProfileBinding binding;
+
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        binding = FragmentProfileBinding.inflate(inflater, container, false);
+        return binding.getRoot();
     }
 
     @Override
@@ -29,42 +33,39 @@ public final class ProfileFragment extends Fragment {
         MainViewModel model = new ViewModelProvider(requireActivity(),
                 new MainViewModelFactory(requireContext())).get(MainViewModel.class);
 
-        TextView nameText = view.findViewById(R.id.profileName);
-        TextView emailText = view.findViewById(R.id.profileEmail);
-        TextView idText = view.findViewById(R.id.profileId);
-        TextView wordsText = view.findViewById(R.id.profileWords);
-        TextView errorText = view.findViewById(R.id.profileError);
-        ProgressBar progress = view.findViewById(R.id.profileProgress);
-        Button refreshButton = view.findViewById(R.id.profileRefreshButton);
-        Button logoutButton = view.findViewById(R.id.logoutButton);
-
-        refreshButton.setOnClickListener(button -> model.refresh());
-        logoutButton.setOnClickListener(button -> model.logout());
+        binding.profileRefreshButton.setOnClickListener(button -> model.refresh());
+        binding.logoutButton.setOnClickListener(button -> model.logout());
 
         model.getState().observe(getViewLifecycleOwner(), state -> {
             boolean loading = state.isLoading();
 
-            progress.setVisibility(loading ? View.VISIBLE : View.GONE);
-            refreshButton.setEnabled(!loading);
-            logoutButton.setEnabled(!loading);
+            binding.profileProgress.setVisibility(loading ? View.VISIBLE : View.GONE);
+            binding.profileRefreshButton.setEnabled(!loading);
+            binding.logoutButton.setEnabled(!loading);
 
-            errorText.setText(state.getError());
-            errorText.setVisibility(state.getError().isEmpty() ? View.GONE : View.VISIBLE);
+            binding.profileError.setText(state.getError());
+            binding.profileError.setVisibility(state.getError().isEmpty() ? View.GONE : View.VISIBLE);
 
             User user = state.getUser();
 
             if (user == null) {
-                nameText.setText(loading ? "Загрузка профиля…" : "Профиль не загружен");
-                emailText.setText("");
-                idText.setText("");
-                wordsText.setText("");
+                binding.profileName.setText(loading ? "Загрузка профиля…" : "Профиль не загружен");
+                binding.profileEmail.setText("");
+                binding.profileId.setText("");
+                binding.profileWords.setText("");
                 return;
             }
 
-            nameText.setText(user.getName().isEmpty() ? "Пользователь" : user.getName());
-            emailText.setText(user.getEmail());
-            idText.setText("ID пользователя: " + user.getId());
-            wordsText.setText("Слов в личном словаре: " + state.getDictionary().size());
+            binding.profileName.setText(user.getName().isEmpty() ? "Пользователь" : user.getName());
+            binding.profileEmail.setText(user.getEmail());
+            binding.profileId.setText("ID пользователя: " + user.getId());
+            binding.profileWords.setText("Слов в личном словаре: " + state.getDictionary().size());
         });
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
     }
 }
