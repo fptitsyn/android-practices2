@@ -43,7 +43,7 @@ public final class RecognitionRepositoryImpl implements RecognitionRepository {
                         ImageClassifier.ImageClassifierOptions.builder().setMaxResults(5).build();
 
                 classifier = ImageClassifier.createFromFileAndOptions(
-                        context, "efficientnet-lite0.tflite", options);
+                        context, "efficientnet_lite0.tflite", options);
             }
 
             bitmap = readBitmap(Uri.parse(imageUri));

@@ -7,6 +7,11 @@
         android:title="Каталог" />
 
     <item
+        android:id="@+id/nav_recognition"
+        android:icon="@android:drawable/ic_menu_camera"
+        android:title="Распознавание" />
+
+    <item
         android:id="@+id/nav_dictionary"
         android:icon="@android:drawable/ic_menu_edit"
         android:title="Мой словарь" />

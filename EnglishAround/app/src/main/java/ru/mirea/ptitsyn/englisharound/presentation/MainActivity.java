@@ -49,7 +49,7 @@ public final class MainActivity extends AppCompatActivity {
         navController = host.getNavController();
 
         appBarConfiguration = new AppBarConfiguration.Builder(
-                R.id.nav_catalog, R.id.nav_dictionary, R.id.nav_profile).build();
+                R.id.nav_catalog, R.id.nav_recognition, R.id.nav_dictionary, R.id.nav_profile).build();
 
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
         NavigationUI.setupWithNavController(binding.bottomNavigation, navController);

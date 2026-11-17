@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="16dp">
+
+        <TextView
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Распознавание предмета" android:textSize="24sp" android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/cameraButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Сделать фото" />
+
+        <Button
+            android:id="@+id/galleryButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Выбрать из галереи" />
+
+        <ImageView
+            android:id="@+id/photoPreview"
+            android:layout_width="match_parent" android:layout_height="220dp"
+            android:layout_marginTop="12dp" android:scaleType="fitCenter"
+            android:contentDescription="Выбранная фотография" />
+
+        <ProgressBar
+            android:id="@+id/recognitionProgress"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal" android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/recognitionError"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textColor="#B3261E" />
+
+        <TextView
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" android:text="Выберите подходящий вариант"
+            android:textSize="18sp" />
+
+        <RadioGroup
+            android:id="@+id/candidatesGroup"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <EditText
+            android:id="@+id/englishInput"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:hint="Английское слово" android:inputType="text"
+            android:singleLine="true" android:minHeight="48dp" />
+
+        <EditText
+            android:id="@+id/translationInput"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:hint="Русский перевод" android:inputType="text"
+            android:singleLine="true" android:minHeight="48dp" />
+
+        <Button
+            android:id="@+id/addWordButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Добавить в словарь" android:enabled="false" />
+
+        <TextView
+            android:id="@+id/saveMessage"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:textSize="16sp" />
+
+    </LinearLayout>
+</ScrollView>
