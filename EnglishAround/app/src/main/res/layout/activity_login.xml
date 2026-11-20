@@ -61,6 +61,13 @@
             android:id="@+id/loginButton" style="@style/EaButton"
             android:layout_marginTop="8dp" android:text="Войти"/>
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/guestButton"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Продолжить как гость" />
+
         <ProgressBar android:id="@+id/progress"
             android:layout_width="28dp" android:layout_height="28dp"
             android:layout_gravity="center_horizontal" android:layout_marginTop="12dp"

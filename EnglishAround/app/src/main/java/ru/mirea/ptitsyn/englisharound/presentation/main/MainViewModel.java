@@ -27,6 +27,7 @@ import ru.mirea.ptitsyn.domain.repository.WordRepository;
 import ru.mirea.ptitsyn.domain.usecases.auth.GetCurrentUserUseCase;
 import ru.mirea.ptitsyn.domain.usecases.auth.LogoutUserUseCase;
 import ru.mirea.ptitsyn.domain.usecases.catalog.GetWordCatalogUseCase;
+import ru.mirea.ptitsyn.domain.usecases.catalog.SearchWordsUseCase;
 import ru.mirea.ptitsyn.domain.usecases.dict.AddWordToDictionaryUseCase;
 import ru.mirea.ptitsyn.domain.usecases.dict.GetPersonalDictionaryUseCase;
 import ru.mirea.ptitsyn.domain.usecases.dict.RemoveWordFromDictionaryUseCase;
@@ -70,12 +71,16 @@ public final class MainViewModel extends ViewModel {
     private final SaveRecognizedWordUseCase saveRecognizedWord;
     private final MutableLiveData<String> recognitionSaveMessage = new MutableLiveData<>("");
 
+    private final boolean guestMode;
+    private final SearchWordsUseCase searchWords = new SearchWordsUseCase();
+
     public MainViewModel(
             AuthRepository authRepository,
             UserRepository userRepository,
             WordRepository wordRepository,
             UserDictionaryRepository dictionaryRepository,
-            Executor mainExecutor
+            Executor mainExecutor,
+            boolean guestMode
     ) {
         this.mainExecutor = mainExecutor;
         this.userRepository = userRepository;
@@ -96,6 +101,8 @@ public final class MainViewModel extends ViewModel {
         state.addSource(catalogSource, words -> publishState());
         state.addSource(dictionarySource, words -> publishState());
 
+        this.guestMode = guestMode;
+
         refresh();
     }
 
@@ -109,6 +116,10 @@ public final class MainViewModel extends ViewModel {
         }
 
         submit(() -> {
+                    if (guestMode) {
+                        return new LoadedData(null, getCatalog.execute(), Collections.emptyList());
+                    }
+
                     User authenticatedUser = getCurrentUser.execute();
 
                     if (authenticatedUser == null) {
@@ -144,7 +155,7 @@ public final class MainViewModel extends ViewModel {
                 },
                 result -> {
                     currentUser = result.user;
-                    signedOut = result.user == null;
+                    signedOut = !guestMode && result.user == null;
 
                     catalogSource.setValue(result.catalog);
                     dictionarySource.setValue(result.dictionary);
@@ -208,10 +219,22 @@ public final class MainViewModel extends ViewModel {
     }
 
     private boolean canChangeDictionary() {
-        return !loading
-                && !signedOut
-                && !cleared
-                && currentUser != null;
+        return !guestMode &&
+               !loading &&
+               !signedOut &&
+               !cleared &&
+               currentUser != null;
+    }
+
+    public boolean isGuestMode() {
+        return guestMode;
+    }
+
+    public void leaveGuestMode() {
+        if (guestMode && !signedOut && !cleared) {
+            signedOut = true;
+            publishState();
+        }
     }
 
     private <T> void submit(
@@ -372,5 +395,10 @@ public final class MainViewModel extends ViewModel {
                 },
                 "Не удалось сохранить распознанное слово"
         );
+    }
+
+    public List<Word> searchCatalog(String query) {
+        List<Word> words = catalogSource.getValue();
+        return searchWords.execute(words == null ? Collections.emptyList() : words, query);
     }
 }

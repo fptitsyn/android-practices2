@@ -17,6 +17,9 @@ import androidx.annotation.Nullable;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.NavController;
+import androidx.navigation.NavDestination;
+import androidx.navigation.fragment.NavHostFragment;
 
 import com.squareup.picasso.Picasso;
 
@@ -25,6 +28,7 @@ import java.util.Locale;
 
 import ru.mirea.ptitsyn.domain.models.RecognitionResult;
 import ru.mirea.ptitsyn.domain.models.Word;
+import ru.mirea.ptitsyn.englisharound.R;
 import ru.mirea.ptitsyn.englisharound.databinding.FragmentRecognitionBinding;
 import ru.mirea.ptitsyn.englisharound.presentation.main.MainUiState;
 import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModel;
@@ -63,7 +67,7 @@ public final class RecognitionFragment extends Fragment {
                 new RecognitionViewModelFactory(requireContext())).get(RecognitionViewModel.class);
 
         mainModel = new ViewModelProvider(requireActivity(),
-                new MainViewModelFactory(requireContext())).get(MainViewModel.class);
+                new MainViewModelFactory(requireActivity())).get(MainViewModel.class);
 
         if (savedInstanceState != null) {
             pendingCameraUri = savedInstanceState.getString("pending_camera_uri");
@@ -90,6 +94,13 @@ public final class RecognitionFragment extends Fragment {
         });
 
         binding.addWordButton.setOnClickListener(button -> saveWord());
+        binding.openRecognizedWordButton.setOnClickListener(button -> openRecognizedWord());
+
+        if (mainModel.isGuestMode()) {
+            binding.translationInput.setVisibility(View.GONE);
+            binding.addWordButton.setVisibility(View.GONE);
+            binding.saveMessage.setVisibility(View.GONE);
+        }
 
         recognitionModel.getImageUri().observe(getViewLifecycleOwner(), uri -> {
             if (uri == null || uri.isEmpty()) {
@@ -142,6 +153,7 @@ public final class RecognitionFragment extends Fragment {
 
         recognitionModel.getSelected().observe(getViewLifecycleOwner(), result -> {
             String word = result == null ? "" : result.getWord();
+            binding.englishInput.setError(null);
             binding.englishInput.setText(word);
             binding.translationInput.setText(findTranslation(word));
             updateButtons();
@@ -220,6 +232,31 @@ public final class RecognitionFragment extends Fragment {
         mainModel.saveRecognizedWord(english, translation);
     }
 
+    private void openRecognizedWord() {
+        String english = binding.englishInput.getText().toString().trim();
+        binding.englishInput.setError(null);
+
+        if (english.isEmpty()) {
+            binding.englishInput.setError("Выберите вариант или введите английское слово");
+            return;
+        }
+
+        NavController controller = NavHostFragment.findNavController(this);
+        NavDestination destination = controller.getCurrentDestination();
+
+        if (destination == null || destination.getId() != R.id.nav_recognition) {
+            return;
+        }
+
+        String translation = mainModel.isGuestMode()
+                ? findTranslation(english) : binding.translationInput.getText().toString().trim();
+
+        Bundle arguments = new Bundle();
+        arguments.putString("english", english);
+        arguments.putString("translation", translation);
+        controller.navigate(R.id.action_recognition_to_word_details, arguments);
+    }
+
     private String findTranslation(String english) {
         MainUiState state = mainModel.getState().getValue();
 
@@ -240,13 +277,14 @@ public final class RecognitionFragment extends Fragment {
         }
 
         boolean busy = recognitionBusy || mainBusy;
-        boolean selected = recognitionModel.getSelected().getValue() != null;
+        boolean canSave = !busy && !mainModel.isGuestMode();
 
         binding.cameraButton.setEnabled(!busy);
         binding.galleryButton.setEnabled(!busy);
-        binding.addWordButton.setEnabled(!busy && selected);
-        binding.englishInput.setEnabled(!busy && selected);
-        binding.translationInput.setEnabled(!busy && selected);
+        binding.englishInput.setEnabled(!busy);
+        binding.openRecognizedWordButton.setEnabled(!busy);
+        binding.translationInput.setEnabled(canSave);
+        binding.addWordButton.setEnabled(canSave);
 
         for (int i = 0; i < binding.candidatesGroup.getChildCount(); i++) {
             binding.candidatesGroup.getChildAt(i).setEnabled(!busy);

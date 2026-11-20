@@ -13,6 +13,15 @@
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginTop="8dp" android:textSize="14sp" />
 
+    <androidx.appcompat.widget.SearchView
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:id="@+id/catalogSearch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:iconifiedByDefault="false"
+        app:queryHint="Слово или перевод" />
+
     <Button
         android:id="@+id/refreshButton"
         android:layout_width="match_parent" android:layout_height="wrap_content"

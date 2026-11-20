@@ -31,20 +31,39 @@ public final class ProfileFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         MainViewModel model = new ViewModelProvider(requireActivity(),
-                new MainViewModelFactory(requireContext())).get(MainViewModel.class);
+                new MainViewModelFactory(requireActivity())).get(MainViewModel.class);
 
         binding.profileRefreshButton.setOnClickListener(button -> model.refresh());
-        binding.logoutButton.setOnClickListener(button -> model.logout());
+
+        boolean guest = model.isGuestMode();
+        binding.logoutButton.setText(guest ? "Войти или зарегистрироваться" : "Выйти из аккаунта");
+        binding.profileRefreshButton.setVisibility(guest ? View.GONE : View.VISIBLE);
+
+        binding.logoutButton.setOnClickListener(button -> {
+            if (guest) {
+                model.leaveGuestMode();
+            } else {
+                model.logout();
+            }
+        });
 
         model.getState().observe(getViewLifecycleOwner(), state -> {
             boolean loading = state.isLoading();
 
             binding.profileProgress.setVisibility(loading ? View.VISIBLE : View.GONE);
             binding.profileRefreshButton.setEnabled(!loading);
-            binding.logoutButton.setEnabled(!loading);
+            binding.logoutButton.setEnabled(guest || !loading);
 
             binding.profileError.setText(state.getError());
             binding.profileError.setVisibility(state.getError().isEmpty() ? View.GONE : View.VISIBLE);
+
+            if (guest) {
+                binding.profileName.setText("Гость");
+                binding.profileEmail.setText("Войдите, чтобы сохранять слова в личный словарь.");
+                binding.profileId.setText("");
+                binding.profileWords.setText("");
+                return;
+            }
 
             User user = state.getUser();
 

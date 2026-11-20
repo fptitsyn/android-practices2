@@ -36,7 +36,7 @@ public final class WordDetailsFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         MainViewModel model = new ViewModelProvider(requireActivity(),
-                new MainViewModelFactory(requireContext())).get(MainViewModel.class);
+                new MainViewModelFactory(requireActivity())).get(MainViewModel.class);
 
         Bundle arguments = requireArguments();
         String english = arguments.getString("english", "");

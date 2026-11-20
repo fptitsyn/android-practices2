@@ -36,7 +36,7 @@ public final class PersonalDictionaryFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         MainViewModel model = new ViewModelProvider(requireActivity(),
-                new MainViewModelFactory(requireContext())).get(MainViewModel.class);
+                new MainViewModelFactory(requireActivity())).get(MainViewModel.class);
 
         binding.listHint.setText("Нажмите для просмотра статьи. Удерживайте для удаления из словаря.");
         binding.emptyText.setText("Вы пока не добавили слова в личный словарь");

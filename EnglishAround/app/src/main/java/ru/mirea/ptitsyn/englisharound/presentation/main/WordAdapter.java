@@ -55,10 +55,15 @@ public final class WordAdapter extends RecyclerView.Adapter<WordAdapter.WordView
 
         holder.itemView.setOnClickListener(view -> clickListener.onWordClick(word));
 
-        holder.itemView.setOnLongClickListener(view -> {
-            longClickListener.onWordClick(word);
-            return true;
-        });
+        holder.itemView.setOnLongClickListener(null);
+        holder.itemView.setLongClickable(false);
+
+        if (longClickListener != null) {
+            holder.itemView.setOnLongClickListener(view -> {
+                longClickListener.onWordClick(word);
+                return true;
+            });
+        }
 
         Picasso.get().cancelRequest(holder.image);
         holder.image.setImageResource(R.drawable.word_placeholder);

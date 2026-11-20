@@ -1,6 +1,9 @@
 package ru.mirea.ptitsyn.englisharound.presentation.main;
 
+import android.app.Activity;
 import android.content.Context;
+
+import ru.mirea.ptitsyn.englisharound.presentation.MainActivity;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -24,8 +27,11 @@ public final class MainViewModelFactory implements ViewModelProvider.Factory {
 
     private final Context applicationContext;
 
-    public MainViewModelFactory(Context context) {
-        applicationContext = context.getApplicationContext();
+    private final boolean guestMode;
+
+    public MainViewModelFactory(Activity activity) {
+        applicationContext = activity.getApplicationContext();
+        guestMode = activity.getIntent().getBooleanExtra(MainActivity.EXTRA_GUEST_MODE, false);
     }
 
     @NonNull
@@ -47,7 +53,8 @@ public final class MainViewModelFactory implements ViewModelProvider.Factory {
                 userRepository,
                 wordRepository,
                 dictionaryRepository,
-                ContextCompat.getMainExecutor(applicationContext)
+                ContextCompat.getMainExecutor(applicationContext),
+                guestMode
         );
 
         return modelClass.cast(viewModel);

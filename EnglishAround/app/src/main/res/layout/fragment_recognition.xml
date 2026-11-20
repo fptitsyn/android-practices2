@@ -53,6 +53,12 @@
             android:hint="Английское слово" android:inputType="text"
             android:singleLine="true" android:minHeight="48dp" />
 
+        <Button
+            android:id="@+id/openRecognizedWordButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Открыть карточку слова" />
+
         <EditText
             android:id="@+id/translationInput"
             android:layout_width="match_parent" android:layout_height="wrap_content"

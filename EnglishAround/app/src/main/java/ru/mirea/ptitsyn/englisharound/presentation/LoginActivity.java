@@ -39,9 +39,13 @@ public final class LoginActivity extends AppCompatActivity {
         progress = findViewById(R.id.progress);
 
         loginButton.setOnClickListener(v -> submit());
+        MaterialButton guestButton = findViewById(R.id.guestButton);
+        guestButton.setOnClickListener(view -> openMain(true));
+
         registerLink.setOnClickListener(v ->
                 startActivity(new Intent(this, RegisterActivity.class)));
         resetLink.setOnClickListener(v -> resetPassword());
+
         model.getState().observe(this, state -> {
             boolean busy = state.status == AuthState.Status.LOADING;
             loginButton.setEnabled(!busy);
@@ -49,6 +53,7 @@ public final class LoginActivity extends AppCompatActivity {
             resetLink.setEnabled(!busy);
             emailInput.setEnabled(!busy);
             passwordInput.setEnabled(!busy);
+            guestButton.setEnabled(!busy);
             progress.setVisibility(busy ? View.VISIBLE : View.GONE);
             errorText.setText(state.message);
             errorText.setVisibility(state.status == AuthState.Status.ERROR ? View.VISIBLE : View.GONE);
@@ -90,8 +95,16 @@ public final class LoginActivity extends AppCompatActivity {
     }
 
     private void openMain() {
-        if (isFinishing()) return;
+        openMain(false);
+    }
+
+    private void openMain(boolean guestMode) {
+        if (isFinishing()) {
+            return;
+        }
+
         Intent intent = new Intent(this, MainActivity.class);
+        intent.putExtra(MainActivity.EXTRA_GUEST_MODE, guestMode);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();

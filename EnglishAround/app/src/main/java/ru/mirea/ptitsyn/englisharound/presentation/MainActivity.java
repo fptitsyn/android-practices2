@@ -20,6 +20,8 @@ import ru.mirea.ptitsyn.englisharound.presentation.main.MainViewModelFactory;
 
 public final class MainActivity extends AppCompatActivity {
 
+    public static final String EXTRA_GUEST_MODE = "ru.mirea.ptitsyn.englisharound.GUEST_MODE";
+
     private ActivityMainBinding binding;
     private NavController navController;
     private AppBarConfiguration appBarConfiguration;
@@ -52,6 +54,9 @@ public final class MainActivity extends AppCompatActivity {
                 R.id.nav_catalog, R.id.nav_recognition, R.id.nav_dictionary, R.id.nav_profile).build();
 
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
+
+        boolean guestMode = getIntent().getBooleanExtra(EXTRA_GUEST_MODE, false);
+        binding.bottomNavigation.getMenu().findItem(R.id.nav_dictionary).setVisible(!guestMode);
         NavigationUI.setupWithNavController(binding.bottomNavigation, navController);
 
         MainViewModel model = new ViewModelProvider(this, new MainViewModelFactory(this)).get(MainViewModel.class);
